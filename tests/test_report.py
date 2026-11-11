@@ -72,3 +72,42 @@ def test_finding_without_range_evidence_or_fix_takes_two_lines():
             "1 error · 0 warnings · 0 info",
         ]
     )
+
+
+def small_finding(file: str, line: int, severity: str = "warning") -> Finding:
+    return Finding(
+        check_id="check", source="rule", severity=severity, file=file, line=line, message="m"
+    )
+
+
+def test_findings_are_grouped_by_file_and_ordered_by_line_then_severity():
+    review = Review(
+        context=ReviewContext(repo=True, files_changed=2),
+        findings=[
+            small_finding("models/b.sql", 1),
+            small_finding("models/a.sql", 9),
+            small_finding("models/a.sql", 3),
+            small_finding("models/a.sql", 3, severity="error"),
+        ],
+    )
+    assert render_text(review) == "\n".join(
+        [
+            "dbt-review · 2 files changed · context: repo",
+            "",
+            "models/a.sql",
+            "  3      error    check (rule)",
+            "         m",
+            "",
+            "  3      warning  check (rule)",
+            "         m",
+            "",
+            "  9      warning  check (rule)",
+            "         m",
+            "",
+            "models/b.sql",
+            "  1      warning  check (rule)",
+            "         m",
+            "",
+            "1 error · 3 warnings · 0 info",
+        ]
+    )

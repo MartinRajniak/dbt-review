@@ -1,19 +1,28 @@
 """Render a review as text, for people."""
 
+from itertools import groupby
+
 from dbt_review.models import Finding, Review, Severity
 
+SEVERITY_ORDER = [Severity.ERROR, Severity.WARNING, Severity.INFO]
 INDENT = " " * 9
 EVIDENCE_LABEL = "Evidence: "
 
 
 def render_text(review: Review) -> str:
     lines = [_header(review), ""]
-    for finding in review.findings:
-        lines.append(finding.file)
-        lines.extend(_finding_lines(finding))
-        lines.append("")
+    for file, findings in groupby(_in_reading_order(review.findings), key=lambda f: f.file):
+        lines.append(file)
+        for finding in findings:
+            lines.extend(_finding_lines(finding))
+            lines.append("")
     lines.append(_counts(review))
     return "\n".join(lines)
+
+
+def _in_reading_order(findings: list[Finding]) -> list[Finding]:
+    """By file, then line, then severity, so two runs print in the same order."""
+    return sorted(findings, key=lambda f: (f.file, f.line, SEVERITY_ORDER.index(f.severity)))
 
 
 def _header(review: Review) -> str:
