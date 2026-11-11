@@ -95,3 +95,32 @@ left join {{ ref('customer_orders') }} as customer_orders
 
 def test_star_of_a_cte_that_writes_its_columns_out_is_fine():
     assert check("models/customers.sql", STAR_FROM_NAMED_COLUMNS) == []
+
+
+WITH_JINJA = """\
+{% set payment_methods = ['credit_card', 'coupon'] %}
+
+{#
+    One amount column
+    per payment method.
+#}
+select
+    orders.*,
+    {% for payment_method in payment_methods -%}
+    sum(case when payment_method = '{{ payment_method }}' then amount else 0 end) as {{ payment_method }}_amount,
+    {% endfor -%}
+    sum(amount) as total_amount
+
+from {{ ref('stg_orders') }} as orders
+
+left join {{ source('shop', 'payments') }} as payments
+    on orders.order_id = payments.order_id
+
+group by all
+"""
+
+
+def test_jinja_does_not_break_parsing_or_shift_line_numbers():
+    [finding] = check("models/orders.sql", WITH_JINJA)
+
+    assert finding.line == 8

@@ -5,11 +5,13 @@ from sqlglot import exp
 
 from dbt_review.models import Finding, Severity, Source
 
-REF = re.compile(r"\{\{\s*ref\(\s*['\"](\w+)['\"]\s*\)\s*\}\}")
+JINJA_BLOCK = re.compile(r"\{#.*?#\}|\{%.*?%\}", re.DOTALL)
+JINJA_REF = re.compile(r"\{\{\s*ref\(\s*['\"](\w+)['\"]\s*\)\s*\}\}")
+JINJA_EXPRESSION = re.compile(r"\{\{.*?\}\}")
 
 
 def check(path: str, sql: str) -> list[Finding]:
-    tree = sqlglot.parse_one(REF.sub(r"__ref__\1", sql), dialect="duckdb")
+    tree = sqlglot.parse_one(_without_jinja(sql), dialect="duckdb")
     ctes = {cte.alias: cte.this for cte in tree.find_all(exp.CTE)}
     return [
         Finding(
@@ -23,6 +25,13 @@ def check(path: str, sql: str) -> list[Finding]:
         )
         for star in _open_stars(tree, ctes)
     ]
+
+
+def _without_jinja(sql: str) -> str:
+    """SQL that sqlglot can parse, with every statement still on its original line."""
+    sql = JINJA_BLOCK.sub(lambda block: "\n" * block.group().count("\n"), sql)
+    sql = JINJA_REF.sub(r"__ref__\1", sql)
+    return JINJA_EXPRESSION.sub("__jinja__", sql)
 
 
 def _open_stars(select: exp.Select, ctes: dict[str, exp.Select]) -> list[exp.Star]:
