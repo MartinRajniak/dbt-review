@@ -1,6 +1,7 @@
 import io
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -87,3 +88,10 @@ def test_unknown_base_is_a_tool_failure(repo_on_a_branch, capsys):
 def test_base_and_diff_together_are_rejected(capsys):
     assert main(["--base", "main", "--diff", FANOUT_DIFF]) == EXIT_TOOL_FAILED
     assert "either --base or --diff" in capsys.readouterr().err
+
+
+def test_output_is_utf8_whatever_the_console_code_page():
+    """Run as a real process: on Windows, piped output otherwise uses a legacy code page."""
+    run_main = "import sys; from dbt_review.cli import main; sys.exit(main())"
+    result = subprocess.run([sys.executable, "-c", run_main, "--diff", FANOUT_DIFF], capture_output=True)
+    assert result.stdout.decode("utf-8").startswith("dbt-review · 2 files changed")

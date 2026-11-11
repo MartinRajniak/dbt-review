@@ -22,6 +22,8 @@ class ToolError(Exception):
 
 
 def main(argv: list[str] | None = None) -> int:
+    # The report is UTF-8 on every platform; Windows would otherwise pick a legacy code page.
+    sys.stdout.reconfigure(encoding="utf-8")
     args = _parse_arguments(argv)
     try:
         diff_text = _read_diff(args)
