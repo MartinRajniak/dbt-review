@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Severity(StrEnum):
@@ -16,6 +16,10 @@ class Source(StrEnum):
     LLM = "llm"  # a judgement; should come with evidence
 
 
+# Keeps reviews short: the more text there is in a PR, the less of it gets read.
+MAX_TEXT_LENGTH = 300
+
+
 class Finding(BaseModel):
     check_id: str
     source: Source
@@ -23,9 +27,9 @@ class Finding(BaseModel):
     file: str
     line: int
     end_line: int | None = None
-    message: str
+    message: str = Field(max_length=MAX_TEXT_LENGTH)
     evidence: list[str] = []
-    suggestion: str | None = None
+    suggestion: str | None = Field(default=None, max_length=MAX_TEXT_LENGTH)
 
 
 class ReviewContext(BaseModel):
