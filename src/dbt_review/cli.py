@@ -1,8 +1,4 @@
-"""Command line entry point.
-
-Exit code 2 means the tool itself could not do its job. It is kept apart from the exit
-codes of a review result, so CI can tell "your change has a problem" from "the reviewer broke".
-"""
+"""Command line entry point."""
 
 import argparse
 import subprocess
@@ -14,15 +10,15 @@ from dbt_review.models import Review, ReviewContext
 from dbt_review.report import render_json, render_text
 
 EXIT_OK = 0
-EXIT_TOOL_FAILED = 2
+EXIT_TOOL_FAILED = 2  # the tool broke; says nothing about the change under review
 
 
 class ToolError(Exception):
-    """The tool was called in a way it cannot work with. Nothing to do with the code under review."""
+    """The tool cannot run with the input it was given."""
 
 
 def main(argv: list[str] | None = None) -> int:
-    # The report is UTF-8 on every platform; Windows would otherwise pick a legacy code page.
+    # Windows would otherwise pick a legacy code page.
     sys.stdout.reconfigure(encoding="utf-8")
     args = _parse_arguments(argv)
     try:

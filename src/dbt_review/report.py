@@ -1,5 +1,3 @@
-"""Render a review as text (for people) or JSON (for machines)."""
-
 import json
 from itertools import groupby
 
@@ -11,7 +9,6 @@ EVIDENCE_LABEL = "Evidence: "
 
 
 def render_text(review: Review, show_info: bool = False) -> str:
-    """Info findings are hidden unless asked for: the more text, the less of it gets read."""
     lines = [_header(review), ""]
     for file, findings in groupby(_shown_findings(review, show_info), key=lambda f: f.file):
         lines.append(file)
@@ -23,7 +20,7 @@ def render_text(review: Review, show_info: bool = False) -> str:
 
 
 def render_json(review: Review, show_info: bool = False) -> str:
-    """Same findings as the text report. The summary counts all of them, shown or not."""
+    """The summary counts every finding, shown or not."""
     payload = {
         "context": review.context.model_dump(),
         "summary": {
@@ -37,13 +34,12 @@ def render_json(review: Review, show_info: bool = False) -> str:
 
 
 def _shown_findings(review: Review, show_info: bool) -> list[Finding]:
-    """Without info unless asked; by file, line, then severity, so two runs print the same."""
+    """Sorted, so two runs print the same."""
     shown = [f for f in review.findings if show_info or f.severity != Severity.INFO]
     return sorted(shown, key=lambda f: (f.file, f.line, SEVERITY_ORDER.index(f.severity)))
 
 
 def _header(review: Review) -> str:
-    """Says what the review could see, so a reader knows how far to trust it."""
     context = review.context
     parts = ["dbt-review"]
     if context.base:

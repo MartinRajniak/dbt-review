@@ -1,5 +1,3 @@
-"""The data shapes every other module shares: a finding, and a whole review."""
-
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -16,7 +14,6 @@ class Source(StrEnum):
     LLM = "llm"  # a judgement; should come with evidence
 
 
-# Keeps reviews short: the more text there is in a PR, the less of it gets read.
 MAX_TEXT_LENGTH = 300
 
 
@@ -33,7 +30,7 @@ class Finding(BaseModel):
 
 
 class ReviewContext(BaseModel):
-    """What the review could see. Printed in the header so a reader knows how far to trust it."""
+    """What the review could see."""
 
     repo: bool
     base: str | None = None

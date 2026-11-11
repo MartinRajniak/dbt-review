@@ -1,7 +1,6 @@
-"""Turn a unified diff into the changed dbt files and the line numbers that were added.
+"""Turn a unified diff into the changed dbt files and their added line numbers.
 
-The diff only says *where to look*. Line numbers are those of the new version of each file,
-which is the version on disk when the PR branch is checked out.
+Line numbers are those of the new version of each file.
 """
 
 import subprocess
@@ -15,23 +14,18 @@ DBT_SUFFIXES = {".sql", ".yml", ".yaml"}
 
 @dataclass
 class ChangedFile:
-    path: str  # relative to the repo root, with forward slashes, as git prints it
+    path: str  # relative to the repo root, forward slashes
     added_lines: list[int]
 
 
 def git_diff(repo: Path, base: str) -> str:
-    """What the checked-out branch changed since it left `base`.
-
-    Three dots compare against the point where the branch started, as a pull request does.
-    Two dots would also report whatever landed on `base` in the meantime.
-    """
+    """Three dots, as a pull request does: two would also report what landed on `base` since."""
     command = ["git", "-C", str(repo), "diff", "--no-color", "--no-ext-diff", f"{base}...HEAD"]
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", check=True)
     return result.stdout
 
 
 def parse_diff(diff_text: str) -> list[ChangedFile]:
-    """Changed dbt files in the diff. Deleted files are left out: nothing is left to review."""
     return [
         ChangedFile(path=patched_file.path, added_lines=_added_lines(patched_file))
         for patched_file in PatchSet(diff_text)
