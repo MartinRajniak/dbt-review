@@ -1,0 +1,10 @@
+from dbt_review.models import Severity, Source
+from dbt_review.select_star import check
+
+
+def test_model_that_only_stars_a_relation_is_flagged():
+    [finding] = check("models/customers.sql", "select * from {{ ref('stg_customers') }}\n")
+
+    assert finding.check_id == "select-star"
+    assert (finding.source, finding.severity) == (Source.RULE, Severity.WARNING)
+    assert (finding.file, finding.line) == ("models/customers.sql", 1)
