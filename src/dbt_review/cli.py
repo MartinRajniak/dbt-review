@@ -28,7 +28,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"dbt-review: {error}", file=sys.stderr)
         return EXIT_TOOL_FAILED
     changed = parse_diff(diff_text)
-    review = Review(context=ReviewContext(repo=False, files_changed=len(changed)))
+    has_repo = (Path(args.repo) / "dbt_project.yml").is_file()
+    review = Review(context=ReviewContext(repo=has_repo, files_changed=len(changed)))
     print(render_text(review))
     return EXIT_OK
 
@@ -37,6 +38,7 @@ def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="dbt-review", description="Review dbt model changes in a git diff."
     )
+    parser.add_argument("--repo", default=".", help="dbt project under review (default: here)")
     parser.add_argument("--diff", help="file holding the diff to review")
     return parser.parse_args(argv)
 

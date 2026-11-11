@@ -18,3 +18,14 @@ def test_diff_file_is_reviewed_and_the_report_printed(capsys):
 def test_unreadable_diff_file_is_a_tool_failure(tmp_path, capsys):
     assert main(["--diff", str(tmp_path / "missing.diff")]) == EXIT_TOOL_FAILED
     assert "cannot read diff file" in capsys.readouterr().err
+
+
+def test_without_a_dbt_project_the_review_says_it_only_saw_the_diff(tmp_path, capsys):
+    main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF])
+    assert "context: diff-only" in capsys.readouterr().out
+
+
+def test_with_a_dbt_project_the_review_says_it_saw_the_repo(tmp_path, capsys):
+    (tmp_path / "dbt_project.yml").write_text("name: jaffle_shop")
+    main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF])
+    assert "context: repo" in capsys.readouterr().out
