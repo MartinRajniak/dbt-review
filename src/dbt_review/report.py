@@ -9,14 +9,16 @@ INDENT = " " * 9
 EVIDENCE_LABEL = "Evidence: "
 
 
-def render_text(review: Review) -> str:
+def render_text(review: Review, show_info: bool = False) -> str:
+    """Info findings are hidden unless asked for: the more text, the less of it gets read."""
+    shown = [f for f in review.findings if show_info or f.severity != Severity.INFO]
     lines = [_header(review), ""]
-    for file, findings in groupby(_in_reading_order(review.findings), key=lambda f: f.file):
+    for file, findings in groupby(_in_reading_order(shown), key=lambda f: f.file):
         lines.append(file)
         for finding in findings:
             lines.extend(_finding_lines(finding))
             lines.append("")
-    lines.append(_counts(review))
+    lines.append(_counts(review, show_info))
     return "\n".join(lines)
 
 
@@ -52,12 +54,14 @@ def _finding_lines(finding: Finding) -> list[str]:
     return lines
 
 
-def _counts(review: Review) -> str:
+def _counts(review: Review, show_info: bool) -> str:
+    infos = review.count(Severity.INFO)
+    hidden_note = " hidden (--show-info)" if infos and not show_info else ""
     return " · ".join(
         [
             _plural(review.count(Severity.ERROR), "error"),
             _plural(review.count(Severity.WARNING), "warning"),
-            f"{review.count(Severity.INFO)} info",
+            f"{infos} info{hidden_note}",
         ]
     )
 

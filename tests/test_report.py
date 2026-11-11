@@ -111,3 +111,33 @@ def test_findings_are_grouped_by_file_and_ordered_by_line_then_severity():
             "1 error · 3 warnings · 0 info",
         ]
     )
+
+
+def review_with_a_warning_and_an_info() -> Review:
+    return Review(
+        context=ReviewContext(repo=True, files_changed=1),
+        findings=[
+            small_finding("models/a.sql", 1),
+            small_finding("models/a.sql", 2, severity="info"),
+        ],
+    )
+
+
+def test_info_findings_are_hidden_by_default_but_still_counted():
+    assert render_text(review_with_a_warning_and_an_info()) == "\n".join(
+        [
+            "dbt-review · 1 file changed · context: repo",
+            "",
+            "models/a.sql",
+            "  1      warning  check (rule)",
+            "         m",
+            "",
+            "0 errors · 1 warning · 1 info hidden (--show-info)",
+        ]
+    )
+
+
+def test_info_findings_are_shown_on_request():
+    text = render_text(review_with_a_warning_and_an_info(), show_info=True)
+    assert "  2      info     check (rule)" in text
+    assert text.endswith("0 errors · 1 warning · 1 info")
