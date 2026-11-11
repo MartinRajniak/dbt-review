@@ -33,3 +33,39 @@ select * from final
 
 def test_stars_are_fine_when_the_columns_are_written_out_in_the_file():
     assert check("models/customers.sql", NAMED_COLUMNS) == []
+
+
+def test_count_star_is_not_a_star_select():
+    sql = "select customer_id, count(*) as number_of_orders from {{ ref('stg_orders') }} group by 1\n"
+
+    assert check("models/customer_orders.sql", sql) == []
+
+
+STAR_FROM_AN_IMPORT = """\
+with customers as (
+
+    select * from {{ ref('stg_customers') }}
+
+),
+
+final as (
+
+    select
+        customers.*,
+        customer_orders.number_of_orders
+
+    from customers
+
+    left join {{ ref('customer_orders') }} as customer_orders
+        on customers.customer_id = customer_orders.customer_id
+
+)
+
+select * from final
+"""
+
+
+def test_qualified_star_is_flagged_on_its_own_line():
+    [finding] = check("models/customers.sql", STAR_FROM_AN_IMPORT)
+
+    assert finding.line == 10
