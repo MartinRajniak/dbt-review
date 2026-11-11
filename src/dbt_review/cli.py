@@ -8,6 +8,7 @@ from pathlib import Path
 from dbt_review.diff import git_diff, parse_diff
 from dbt_review.models import Review, ReviewContext
 from dbt_review.report import render_json, render_text
+from dbt_review.review import run_checks
 
 EXIT_OK = 0
 EXIT_TOOL_FAILED = 2  # the tool broke; says nothing about the change under review
@@ -27,9 +28,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"dbt-review: {error}", file=sys.stderr)
         return EXIT_TOOL_FAILED
     changed = parse_diff(diff_text)
-    has_repo = (Path(args.repo) / "dbt_project.yml").is_file()
+    repo = Path(args.repo)
+    has_repo = (repo / "dbt_project.yml").is_file()
     context = ReviewContext(repo=has_repo, base=args.base, files_changed=len(changed))
-    review = Review(context=context)
+    review = Review(context=context, findings=run_checks(repo, changed) if has_repo else [])
     render = render_json if args.format == "json" else render_text
     print(render(review))
     return EXIT_OK

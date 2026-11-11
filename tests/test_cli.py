@@ -95,3 +95,33 @@ def test_output_is_utf8_whatever_the_console_code_page():
     run_main = "import sys; from dbt_review.cli import main; sys.exit(main())"
     result = subprocess.run([sys.executable, "-c", run_main, "--diff", FANOUT_DIFF], capture_output=True)
     assert result.stdout.decode("utf-8").startswith("dbt-review · 2 files changed")
+
+
+STAR_DIFF = """\
+diff --git a/models/customers.sql b/models/customers.sql
+--- a/models/customers.sql
++++ b/models/customers.sql
+@@ -1,3 +1,3 @@
+-select customer_id
++select *
+ 
+ from {{ ref('stg_customers') }}
+"""
+
+
+@pytest.fixture
+def dbt_project(tmp_path):
+    (tmp_path / "dbt_project.yml").write_text("name: shop\n")
+    (tmp_path / "models").mkdir()
+    (tmp_path / "models" / "customers.sql").write_text("select *\n\nfrom {{ ref('stg_customers') }}\n")
+    return tmp_path
+
+
+def test_rule_findings_on_changed_models_are_reported(dbt_project, tmp_path, capsys):
+    (tmp_path / "change.diff").write_text(STAR_DIFF)
+
+    main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")])
+
+    out = capsys.readouterr().out
+    assert "models/customers.sql\n  1      warning  select-star (rule)" in out
+    assert "0 errors · 1 warning" in out
