@@ -28,7 +28,8 @@ def check(path: str, sql: str) -> list[Finding]:
 
 
 def _without_jinja(sql: str) -> str:
-    """SQL that sqlglot can parse, with every statement still on its original line."""
+    """Jinja swapped for placeholders, not compiled: compiling would turn ref() into a plain
+    table name and move the line numbers."""
     sql = JINJA_BLOCK.sub(lambda block: "\n" * block.group().count("\n"), sql)
     sql = JINJA_REF.sub(r"__ref__\1", sql)
     return JINJA_EXPRESSION.sub("__jinja__", sql)
@@ -45,7 +46,7 @@ def _open_stars(select: exp.Select, ctes: dict[str, exp.Select]) -> list[exp.Sta
 
 
 def _output_select(select: exp.Select, ctes: dict[str, exp.Select]) -> exp.Select:
-    """The select that decides the columns: `select * from final` defers to `final`."""
+    """A closing `select * from final` names no columns; the select inside `final` does."""
     while _is_pass_through(select) and _tables(select)[0].name in ctes:
         select = ctes[_tables(select)[0].name]
     return select
