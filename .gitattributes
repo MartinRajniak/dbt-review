@@ -1,0 +1,3 @@
+# The tool parses diffs. Keep the example diffs byte-for-byte as git produced them,
+# whatever the line-ending settings of the machine that checks this repo out.
+*.diff -text

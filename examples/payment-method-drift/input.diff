@@ -1,0 +1,10 @@
+diff --git a/models/staging/schema.yml b/models/staging/schema.yml
+index 36f4bb9..c5db3d0 100644
+--- a/models/staging/schema.yml
++++ b/models/staging/schema.yml
+@@ -30,4 +30,4 @@ models:
+         tests:
+           - accepted_values:
+               arguments:
+-                values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
++                values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card', 'paypal']

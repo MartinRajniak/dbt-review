@@ -1,0 +1,15 @@
+diff --git a/models/customers.sql b/models/customers.sql
+index 016a004..b5b27ba 100644
+--- a/models/customers.sql
++++ b/models/customers.sql
+@@ -48,9 +48,7 @@ customer_payments as (
+ final as (
+ 
+     select
+-        customers.customer_id,
+-        customers.first_name,
+-        customers.last_name,
++        customers.*,
+         customer_orders.first_order,
+         customer_orders.most_recent_order,
+         customer_orders.number_of_orders,

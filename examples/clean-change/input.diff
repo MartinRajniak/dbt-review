@@ -1,0 +1,28 @@
+diff --git a/models/customers.sql b/models/customers.sql
+index 016a004..660fee5 100644
+--- a/models/customers.sql
++++ b/models/customers.sql
+@@ -54,6 +54,7 @@ final as (
+         customer_orders.first_order,
+         customer_orders.most_recent_order,
+         customer_orders.number_of_orders,
++        coalesce(customer_orders.number_of_orders, 0) > 1 as is_repeat_customer,
+         customer_payments.total_amount as customer_lifetime_value
+ 
+     from customers
+diff --git a/models/schema.yml b/models/schema.yml
+index e6dba09..1d811ed 100644
+--- a/models/schema.yml
++++ b/models/schema.yml
+@@ -26,6 +26,11 @@ models:
+       - name: number_of_orders
+         description: Count of the number of orders a customer has placed
+ 
++      - name: is_repeat_customer
++        description: True if the customer has placed more than one order
++        tests:
++          - not_null
++
+       - name: total_order_amount
+         description: Total value (AUD) of a customer's orders
+ 

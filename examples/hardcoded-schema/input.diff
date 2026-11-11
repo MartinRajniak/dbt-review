@@ -1,0 +1,13 @@
+diff --git a/models/orders.sql b/models/orders.sql
+index cbb2934..1d622ef 100644
+--- a/models/orders.sql
++++ b/models/orders.sql
+@@ -8,7 +8,7 @@ with orders as (
+ 
+ payments as (
+ 
+-    select * from {{ ref('stg_payments') }}
++    select * from main.stg_payments
+ 
+ ),
+ 
