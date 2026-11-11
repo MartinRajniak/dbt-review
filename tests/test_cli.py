@@ -37,3 +37,8 @@ def test_dash_reads_the_diff_from_standard_input(monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", io.StringIO(Path(FANOUT_DIFF).read_text(encoding="utf-8")))
     assert main(["--diff", "-"]) == EXIT_OK
     assert "2 files changed" in capsys.readouterr().out
+
+
+def test_format_json_prints_the_review_as_json(capsys):
+    assert main(["--diff", FANOUT_DIFF, "--format", "json"]) == EXIT_OK
+    assert json.loads(capsys.readouterr().out)["context"]["files_changed"] == 2

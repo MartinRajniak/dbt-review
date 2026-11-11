@@ -10,7 +10,7 @@ from pathlib import Path
 
 from dbt_review.diff import parse_diff
 from dbt_review.models import Review, ReviewContext
-from dbt_review.report import render_text
+from dbt_review.report import render_json, render_text
 
 EXIT_OK = 0
 EXIT_TOOL_FAILED = 2
@@ -30,7 +30,8 @@ def main(argv: list[str] | None = None) -> int:
     changed = parse_diff(diff_text)
     has_repo = (Path(args.repo) / "dbt_project.yml").is_file()
     review = Review(context=ReviewContext(repo=has_repo, files_changed=len(changed)))
-    print(render_text(review))
+    render = render_json if args.format == "json" else render_text
+    print(render(review))
     return EXIT_OK
 
 
@@ -40,6 +41,7 @@ def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--repo", default=".", help="dbt project under review (default: here)")
     parser.add_argument("--diff", help="file holding the diff to review, or - for standard input")
+    parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser.parse_args(argv)
 
 
