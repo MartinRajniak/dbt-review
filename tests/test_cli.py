@@ -125,3 +125,23 @@ def test_rule_findings_on_changed_models_are_reported(dbt_project, tmp_path, cap
     out = capsys.readouterr().out
     assert "models/customers.sql\n  1      warning  select-star (rule)" in out
     assert "0 errors · 1 warning" in out
+
+
+UNRELATED_DIFF = """\
+diff --git a/models/customers.sql b/models/customers.sql
+--- a/models/customers.sql
++++ b/models/customers.sql
+@@ -1,3 +1,3 @@
+ select *
+ 
+-from {{ ref('customers') }}
++from {{ ref('stg_customers') }}
+"""
+
+
+def test_problems_the_change_did_not_introduce_are_not_reported(dbt_project, tmp_path, capsys):
+    (tmp_path / "change.diff").write_text(UNRELATED_DIFF)
+
+    main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")])
+
+    assert "0 errors · 0 warnings" in capsys.readouterr().out
