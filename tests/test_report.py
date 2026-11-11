@@ -1,5 +1,7 @@
+import json
+
 from dbt_review.models import Finding, Review, ReviewContext
-from dbt_review.report import render_text
+from dbt_review.report import render_json, render_text
 
 
 def test_review_without_findings_is_a_header_and_a_count_line():
@@ -141,3 +143,39 @@ def test_info_findings_are_shown_on_request():
     text = render_text(review_with_a_warning_and_an_info(), show_info=True)
     assert "  2      info     check (rule)" in text
     assert text.endswith("0 errors · 1 warning · 1 info")
+
+
+def test_json_carries_context_summary_and_every_field_of_a_finding():
+    review = Review(
+        context=ReviewContext(repo=True, base="duckdb", files_changed=2),
+        findings=[fanout_finding()],
+    )
+    assert json.loads(render_json(review)) == {
+        "context": {"repo": True, "base": "duckdb", "files_changed": 2},
+        "summary": {"errors": 0, "warnings": 1, "infos": 0},
+        "findings": [
+            {
+                "check_id": "join-fanout",
+                "source": "llm",
+                "severity": "warning",
+                "file": "models/orders.sql",
+                "line": 55,
+                "end_line": 56,
+                "message": "Joining `payments` on `order_id` returns one row per payment.",
+                "evidence": [
+                    "stg_payments has a unique test on payment_id, none on order_id",
+                    "orders.order_id has a unique test, which this join breaks",
+                ],
+                "suggestion": "take payment_method from a CTE grouped by order_id.",
+            }
+        ],
+    }
+
+
+def test_json_hides_info_findings_like_the_text_report_and_still_counts_them():
+    review = review_with_a_warning_and_an_info()
+    default = json.loads(render_json(review))
+    assert [finding["severity"] for finding in default["findings"]] == ["warning"]
+    assert default["summary"]["infos"] == 1
+    everything = json.loads(render_json(review, show_info=True))
+    assert [finding["severity"] for finding in everything["findings"]] == ["warning", "info"]

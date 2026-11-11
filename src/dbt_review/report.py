@@ -1,5 +1,6 @@
-"""Render a review as text, for people."""
+"""Render a review as text (for people) or JSON (for machines)."""
 
+import json
 from itertools import groupby
 
 from dbt_review.models import Finding, Review, Severity
@@ -11,9 +12,8 @@ EVIDENCE_LABEL = "Evidence: "
 
 def render_text(review: Review, show_info: bool = False) -> str:
     """Info findings are hidden unless asked for: the more text, the less of it gets read."""
-    shown = [f for f in review.findings if show_info or f.severity != Severity.INFO]
     lines = [_header(review), ""]
-    for file, findings in groupby(_in_reading_order(shown), key=lambda f: f.file):
+    for file, findings in groupby(_shown_findings(review, show_info), key=lambda f: f.file):
         lines.append(file)
         for finding in findings:
             lines.extend(_finding_lines(finding))
@@ -22,9 +22,24 @@ def render_text(review: Review, show_info: bool = False) -> str:
     return "\n".join(lines)
 
 
-def _in_reading_order(findings: list[Finding]) -> list[Finding]:
-    """By file, then line, then severity, so two runs print in the same order."""
-    return sorted(findings, key=lambda f: (f.file, f.line, SEVERITY_ORDER.index(f.severity)))
+def render_json(review: Review, show_info: bool = False) -> str:
+    """Same findings as the text report. The summary counts all of them, shown or not."""
+    payload = {
+        "context": review.context.model_dump(),
+        "summary": {
+            "errors": review.count(Severity.ERROR),
+            "warnings": review.count(Severity.WARNING),
+            "infos": review.count(Severity.INFO),
+        },
+        "findings": [f.model_dump(mode="json") for f in _shown_findings(review, show_info)],
+    }
+    return json.dumps(payload, indent=2)
+
+
+def _shown_findings(review: Review, show_info: bool) -> list[Finding]:
+    """Without info unless asked; by file, line, then severity, so two runs print the same."""
+    shown = [f for f in review.findings if show_info or f.severity != Severity.INFO]
+    return sorted(shown, key=lambda f: (f.file, f.line, SEVERITY_ORDER.index(f.severity)))
 
 
 def _header(review: Review) -> str:
