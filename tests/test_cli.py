@@ -1,3 +1,5 @@
+import io
+import json
 from pathlib import Path
 
 from dbt_review.cli import EXIT_OK, EXIT_TOOL_FAILED, main
@@ -29,3 +31,9 @@ def test_with_a_dbt_project_the_review_says_it_saw_the_repo(tmp_path, capsys):
     (tmp_path / "dbt_project.yml").write_text("name: jaffle_shop")
     main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF])
     assert "context: repo" in capsys.readouterr().out
+
+
+def test_dash_reads_the_diff_from_standard_input(monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin", io.StringIO(Path(FANOUT_DIFF).read_text(encoding="utf-8")))
+    assert main(["--diff", "-"]) == EXIT_OK
+    assert "2 files changed" in capsys.readouterr().out

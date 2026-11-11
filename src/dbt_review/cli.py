@@ -39,13 +39,15 @@ def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         prog="dbt-review", description="Review dbt model changes in a git diff."
     )
     parser.add_argument("--repo", default=".", help="dbt project under review (default: here)")
-    parser.add_argument("--diff", help="file holding the diff to review")
+    parser.add_argument("--diff", help="file holding the diff to review, or - for standard input")
     return parser.parse_args(argv)
 
 
 def _read_diff(args: argparse.Namespace) -> str:
     if not args.diff:
         raise ToolError("nothing to review: pass --diff FILE")
+    if args.diff == "-":
+        return sys.stdin.read()
     try:
         return Path(args.diff).read_text(encoding="utf-8")
     except OSError as error:
