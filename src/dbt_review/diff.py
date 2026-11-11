@@ -4,6 +4,7 @@ The diff only says *where to look*. Line numbers are those of the new version of
 which is the version on disk when the PR branch is checked out.
 """
 
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,17 @@ DBT_SUFFIXES = {".sql", ".yml", ".yaml"}
 class ChangedFile:
     path: str  # relative to the repo root, with forward slashes, as git prints it
     added_lines: list[int]
+
+
+def git_diff(repo: Path, base: str) -> str:
+    """What the checked-out branch changed since it left `base`.
+
+    Three dots compare against the point where the branch started, as a pull request does.
+    Two dots would also report whatever landed on `base` in the meantime.
+    """
+    command = ["git", "-C", str(repo), "diff", "--no-color", "--no-ext-diff", f"{base}...HEAD"]
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", check=True)
+    return result.stdout
 
 
 def parse_diff(diff_text: str) -> list[ChangedFile]:

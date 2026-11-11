@@ -1,6 +1,9 @@
 import io
 import json
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from dbt_review.cli import EXIT_OK, EXIT_TOOL_FAILED, main
 
@@ -42,3 +45,45 @@ def test_dash_reads_the_diff_from_standard_input(monkeypatch, capsys):
 def test_format_json_prints_the_review_as_json(capsys):
     assert main(["--diff", FANOUT_DIFF, "--format", "json"]) == EXIT_OK
     assert json.loads(capsys.readouterr().out)["context"]["files_changed"] == 2
+
+
+def git(repo: Path, *arguments: str) -> None:
+    subprocess.run(["git", "-C", str(repo), *arguments], check=True, capture_output=True)
+
+
+@pytest.fixture
+def repo_on_a_branch(tmp_path):
+    """A repo where branch `change` edits orders.sql, and `main` has moved on since."""
+    orders, customers = tmp_path / "models" / "orders.sql", tmp_path / "models" / "customers.sql"
+    orders.parent.mkdir()
+    git(tmp_path, "init", "-q", "-b", "main")
+    git(tmp_path, "config", "user.email", "test@example.com")
+    git(tmp_path, "config", "user.name", "Test")
+    git(tmp_path, "config", "commit.gpgsign", "false")
+    orders.write_text("select 1\n")
+    customers.write_text("select 1\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", "base")
+    git(tmp_path, "checkout", "-q", "-b", "change")
+    orders.write_text("select 1\nunion all select 2\n")
+    git(tmp_path, "commit", "-q", "-am", "change orders")
+    git(tmp_path, "checkout", "-q", "main")
+    customers.write_text("select 3\n")
+    git(tmp_path, "commit", "-q", "-am", "main moves on")
+    git(tmp_path, "checkout", "-q", "change")
+    return tmp_path
+
+
+def test_base_reviews_only_what_the_branch_changed_since_it_left_base(repo_on_a_branch, capsys):
+    assert main(["--repo", str(repo_on_a_branch), "--base", "main"]) == EXIT_OK
+    assert capsys.readouterr().out.startswith("dbt-review · base main · 1 file changed")
+
+
+def test_unknown_base_is_a_tool_failure(repo_on_a_branch, capsys):
+    assert main(["--repo", str(repo_on_a_branch), "--base", "nope"]) == EXIT_TOOL_FAILED
+    assert "git diff against 'nope' failed" in capsys.readouterr().err
+
+
+def test_base_and_diff_together_are_rejected(capsys):
+    assert main(["--base", "main", "--diff", FANOUT_DIFF]) == EXIT_TOOL_FAILED
+    assert "either --base or --diff" in capsys.readouterr().err
