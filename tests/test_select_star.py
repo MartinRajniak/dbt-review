@@ -69,3 +69,29 @@ def test_qualified_star_is_flagged_on_its_own_line():
     [finding] = check("models/customers.sql", STAR_FROM_AN_IMPORT)
 
     assert finding.line == 10
+
+
+STAR_FROM_NAMED_COLUMNS = """\
+with renamed as (
+
+    select
+        id as customer_id,
+        first_name
+
+    from {{ ref('raw_customers') }}
+
+)
+
+select
+    renamed.*,
+    customer_orders.number_of_orders
+
+from renamed
+
+left join {{ ref('customer_orders') }} as customer_orders
+    on renamed.customer_id = customer_orders.customer_id
+"""
+
+
+def test_star_of_a_cte_that_writes_its_columns_out_is_fine():
+    assert check("models/customers.sql", STAR_FROM_NAMED_COLUMNS) == []
