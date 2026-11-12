@@ -1,6 +1,6 @@
 import json
 
-from dbt_review.models import Finding, Review, ReviewContext
+from dbt_review.models import Finding, Review, ReviewContext, Skipped
 from dbt_review.report import render_json, render_text
 
 
@@ -177,3 +177,19 @@ def test_json_hides_info_findings_like_the_text_report_and_still_counts_them():
     assert default["summary"]["infos"] == 1
     everything = json.loads(render_json(review, show_info=True))
     assert [finding["severity"] for finding in everything["findings"]] == ["warning", "info"]
+
+
+def review_with_skipped_checks() -> Review:
+    return Review(
+        context=ReviewContext(repo=False, files_changed=1),
+        skipped=[
+            Skipped(check_id="select-star", reason="no dbt project"),
+            Skipped(check_id="hardcoded-relation", reason="no dbt project"),
+        ],
+    )
+
+
+def test_skipped_checks_are_named_with_the_reason_on_the_last_line():
+    last_line = render_text(review_with_skipped_checks()).splitlines()[-1]
+
+    assert last_line == "skipped (no dbt project): select-star, hardcoded-relation"

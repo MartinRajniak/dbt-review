@@ -16,6 +16,7 @@ def render_text(review: Review, show_info: bool = False) -> str:
             lines.extend(_finding_lines(finding))
             lines.append("")
     lines.append(_counts(review, show_info))
+    lines.extend(_skipped_lines(review))
     return "\n".join(lines)
 
 
@@ -75,6 +76,15 @@ def _counts(review: Review, show_info: bool) -> str:
             f"{infos} info{hidden_note}",
         ]
     )
+
+
+def _skipped_lines(review: Review) -> list[str]:
+    """One line per reason, naming the checks it kept from running."""
+    reasons = dict.fromkeys(skipped.reason for skipped in review.skipped)
+    return [
+        f"skipped ({reason}): " + ", ".join(s.check_id for s in review.skipped if s.reason == reason)
+        for reason in reasons
+    ]
 
 
 def _plural(count: int, noun: str) -> str:

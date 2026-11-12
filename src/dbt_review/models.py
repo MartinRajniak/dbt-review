@@ -29,6 +29,13 @@ class Finding(BaseModel):
     suggestion: str | None = Field(default=None, max_length=MAX_TEXT_LENGTH)
 
 
+class Skipped(BaseModel):
+    """A check that did not run, so its silence is not mistaken for a pass."""
+
+    check_id: str
+    reason: str
+
+
 class ReviewContext(BaseModel):
     """What the review could see."""
 
@@ -40,6 +47,7 @@ class ReviewContext(BaseModel):
 class Review(BaseModel):
     context: ReviewContext
     findings: list[Finding] = []
+    skipped: list[Skipped] = []
 
     def count(self, severity: Severity) -> int:
         return sum(1 for finding in self.findings if finding.severity == severity)
