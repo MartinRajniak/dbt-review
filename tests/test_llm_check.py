@@ -77,3 +77,12 @@ def test_an_answer_from_the_model_becomes_a_finding_on_the_reviewed_file():
     assert (finding.check_id, finding.severity) == ("join-fanout", Severity.WARNING)
     assert (finding.line, finding.end_line) == (3, 4)
     assert finding.evidence == ["stg_payments has a unique test on payment_id, none on order_id"]
+
+
+def test_a_finding_on_a_line_the_change_did_not_add_is_dropped():
+    on_an_old_line = FANOUT | {"line": 1, "end_line": None}
+
+    with reviewer.override(model=model_answering(on_an_old_line, FANOUT)):
+        findings = review_model(orders_context(), model="groq:any")
+
+    assert [finding.line for finding in findings] == [3]

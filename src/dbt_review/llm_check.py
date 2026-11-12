@@ -56,6 +56,7 @@ def review_model(context: ModelContext, model: str) -> list[Finding]:
             suggestion=found.suggestion,
         )
         for found in answer.findings
+        if found.line in context.added_lines  # the model sometimes cites a line it was not asked about
     ]
 
 
