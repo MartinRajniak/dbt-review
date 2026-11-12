@@ -11,7 +11,7 @@ from dbt_review.diff import git_diff
 from dbt_review.errors import ToolError
 from dbt_review.models import Severity
 from dbt_review.report import render_json, render_text
-from dbt_review.review import review_diff
+from dbt_review.review import DEFAULT_MODEL, review_diff
 
 
 class ExitCode(IntEnum):
@@ -26,7 +26,7 @@ def main(argv: list[str] | None = None) -> ExitCode:
         sys.stdout.reconfigure(encoding="utf-8")
     args = _parse_arguments(argv)
     try:
-        review = review_diff(_read_diff(args), Path(args.repo), args.base)
+        review = review_diff(_read_diff(args), Path(args.repo), args.base, args.model)
     except ToolError as error:
         print(f"dbt-review: {error}", file=sys.stderr)
         return ExitCode.TOOL_FAILED
@@ -41,6 +41,7 @@ def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--base", help="git ref the checked-out branch is compared against")
     parser.add_argument("--diff", help="file holding the diff to review, or - for standard input")
     parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument("--model", default=DEFAULT_MODEL, help="LLM as provider:name (default: %(default)s)")
     return parser.parse_args(argv)
 
 

@@ -13,13 +13,13 @@ DEFAULT_MODEL = "groq:openai/gpt-oss-120b"
 API_KEYS = {"groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 
 
-def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
+def review_diff(diff_text: str, repo: Path, base: str | None = None, model: str = DEFAULT_MODEL) -> Review:
     changed = parse_diff(diff_text)
     if not (repo / "dbt_project.yml").is_file():
         raise ToolError(f"no dbt project at {repo} (dbt_project.yml not found); the review needs the code")
     _require_matching_checkout(repo, changed)
     context = ReviewContext(base=base, files_changed=len(changed))
-    llm_findings, skipped = _llm_findings(repo, changed, DEFAULT_MODEL)
+    llm_findings, skipped = _llm_findings(repo, changed, model)
     return Review(context=context, findings=_rule_findings(repo, changed) + llm_findings, skipped=skipped)
 
 

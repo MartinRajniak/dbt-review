@@ -231,3 +231,11 @@ def test_without_an_api_key_the_llm_check_is_reported_as_skipped(parsed_project,
     main(review_of(parsed_project, STAR_DIFF))
 
     assert capsys.readouterr().out.splitlines()[-1] == "skipped (GROQ_API_KEY is not set): llm-review"
+
+
+def test_model_option_chooses_the_provider(parsed_project, monkeypatch, capsys):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    main([*review_of(parsed_project, STAR_DIFF), "--model", "anthropic:claude-haiku-5-5"])
+
+    assert capsys.readouterr().out.splitlines()[-1] == "skipped (ANTHROPIC_API_KEY is not set): llm-review"
