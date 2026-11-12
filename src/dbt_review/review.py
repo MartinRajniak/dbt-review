@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from pydantic_ai.exceptions import AgentRunError
+
 from dbt_review.checks import RULES
 from dbt_review.diff import ChangedFile, parse_diff
 from dbt_review.errors import ToolError
@@ -69,7 +71,10 @@ def _llm_findings(
                 model=facts,
                 inputs=[known for name in facts.reads if (known := manifest.model_named(name))],
             )
-            findings += review_model(context, model)
+            try:
+                findings += review_model(context, model)
+            except AgentRunError as error:
+                return [], [_llm_skipped(f"the model call failed: {type(error).__name__}")]
     return findings, []
 
 

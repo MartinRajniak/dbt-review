@@ -239,3 +239,14 @@ def test_model_option_chooses_the_provider(parsed_project, monkeypatch, capsys):
     main([*review_of(parsed_project, STAR_DIFF), "--model", "anthropic:claude-haiku-5-5"])
 
     assert capsys.readouterr().out.splitlines()[-1] == "skipped (ANTHROPIC_API_KEY is not set): llm-review"
+
+
+def test_a_model_that_keeps_answering_wrongly_skips_the_llm_check_and_keeps_the_rules(parsed_project, capsys):
+    without_evidence = LLM_WARNING | {"evidence": []}
+
+    with reviewer.override(model=model_answering(without_evidence)):
+        assert main(review_of(parsed_project, STAR_DIFF)) == ExitCode.OK
+
+    out = capsys.readouterr().out
+    assert "select-star (rule)" in out
+    assert out.splitlines()[-1].startswith("skipped (the model call failed: ")
