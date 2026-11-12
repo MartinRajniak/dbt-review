@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from dbt_review import select_star
+from dbt_review.checks import select_star
 from dbt_review.diff import ChangedFile
 from dbt_review.models import Finding
 

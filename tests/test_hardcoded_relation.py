@@ -1,4 +1,4 @@
-from dbt_review.hardcoded_relation import check
+from dbt_review.checks.hardcoded_relation import check
 from dbt_review.models import Severity, Source
 
 HARDCODED = """\

@@ -1,5 +1,5 @@
 from dbt_review.models import Severity, Source
-from dbt_review.select_star import check
+from dbt_review.checks.select_star import check
 
 
 def test_model_that_only_stars_a_relation_is_flagged():

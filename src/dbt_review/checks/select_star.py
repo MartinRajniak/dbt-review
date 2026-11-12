@@ -1,17 +1,11 @@
-import re
-
-import sqlglot
 from sqlglot import exp
 
 from dbt_review.models import Finding, Severity, Source
-
-JINJA_BLOCK = re.compile(r"\{#.*?#\}|\{%.*?%\}", re.DOTALL)
-JINJA_REF = re.compile(r"\{\{\s*ref\(\s*['\"](\w+)['\"]\s*\)\s*\}\}")
-JINJA_EXPRESSION = re.compile(r"\{\{.*?\}\}")
+from dbt_review.sql import parse_model
 
 
 def check(path: str, sql: str) -> list[Finding]:
-    tree = sqlglot.parse_one(_without_jinja(sql), dialect="duckdb")
+    tree = parse_model(sql)
     ctes = {cte.alias: cte.this for cte in tree.find_all(exp.CTE)}
     return [
         Finding(
@@ -25,14 +19,6 @@ def check(path: str, sql: str) -> list[Finding]:
         )
         for star in _open_stars(tree, ctes)
     ]
-
-
-def _without_jinja(sql: str) -> str:
-    """Jinja swapped for placeholders, not compiled: compiling would turn ref() into a plain
-    table name and move the line numbers."""
-    sql = JINJA_BLOCK.sub(lambda block: "\n" * block.group().count("\n"), sql)
-    sql = JINJA_REF.sub(r"__ref__\1", sql)
-    return JINJA_EXPRESSION.sub("__jinja__", sql)
 
 
 def _open_stars(select: exp.Select, ctes: dict[str, exp.Select]) -> list[exp.Star]:
