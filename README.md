@@ -20,10 +20,14 @@ models/orders.sql
          rows per order_id, breaking the orders model's unique order_id constraint.
          Evidence: orders model declares a unique test on order_id (order_id unique, not_null).
                    stg_payments (source for payments) does NOT have a unique test on order_id.
+                   +  55 |     left join payments
+                   +  56 |         on orders.order_id = payments.order_id
          Fix: Aggregate payments by order_id before joining or join on a column that is unique in the payments side.
 
 0 errors · 1 warning · 0 info
 ```
+
+This is [`examples/fanout-join/output.txt`](examples/fanout-join/output.txt); one long line is wrapped here.
 
 ## What it checks
 
@@ -90,8 +94,7 @@ uv run pytest            # no network, no API key
 uv run ruff check && uv run mypy
 ```
 
-To re-create every sample output from the scenario branches (needs `dbt` on the path, for example from
-`uv tool install dbt-duckdb`):
+To re-create every sample output from the scenario branches (it runs `dbt parse` through `uvx`):
 
 ```bash
 uv run python examples/regenerate.py --fork ../jaffle_shop_duckdb
