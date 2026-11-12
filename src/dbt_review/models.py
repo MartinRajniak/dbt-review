@@ -39,7 +39,6 @@ class Skipped(BaseModel):
 class ReviewContext(BaseModel):
     """What the review could see."""
 
-    repo: bool
     base: str | None = None
     files_changed: int
 

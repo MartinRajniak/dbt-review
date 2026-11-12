@@ -47,7 +47,6 @@ def _header(review: Review) -> str:
     if context.base:
         parts.append(f"base {context.base}")
     parts.append(_plural(context.files_changed, "file") + " changed")
-    parts.append("context: " + ("repo" if context.repo else "diff-only"))
     return " · ".join(parts)
 
 

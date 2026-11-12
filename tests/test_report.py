@@ -5,10 +5,10 @@ from dbt_review.report import render_json, render_text
 
 
 def test_review_without_findings_is_a_header_and_a_count_line():
-    review = Review(context=ReviewContext(repo=False, files_changed=0))
+    review = Review(context=ReviewContext(files_changed=0))
     assert render_text(review) == "\n".join(
         [
-            "dbt-review · 0 files changed · context: diff-only",
+            "dbt-review · 0 files changed",
             "",
             "0 errors · 0 warnings · 0 info",
         ]
@@ -34,12 +34,12 @@ def fanout_finding() -> Finding:
 
 def test_finding_shows_where_what_evidence_and_fix_under_its_file():
     review = Review(
-        context=ReviewContext(repo=True, base="duckdb", files_changed=2),
+        context=ReviewContext(base="duckdb", files_changed=2),
         findings=[fanout_finding()],
     )
     assert render_text(review) == "\n".join(
         [
-            "dbt-review · base duckdb · 2 files changed · context: repo",
+            "dbt-review · base duckdb · 2 files changed",
             "",
             "models/orders.sql",
             "  55-56  warning  join-fanout (llm)",
@@ -62,10 +62,10 @@ def test_finding_without_range_evidence_or_fix_takes_two_lines():
         line=11,
         message="`main.stg_payments` is hardcoded; use ref('stg_payments').",
     )
-    review = Review(context=ReviewContext(repo=True, files_changed=1), findings=[finding])
+    review = Review(context=ReviewContext(files_changed=1), findings=[finding])
     assert render_text(review) == "\n".join(
         [
-            "dbt-review · 1 file changed · context: repo",
+            "dbt-review · 1 file changed",
             "",
             "models/orders.sql",
             "  11     error    hardcoded-relation (rule)",
@@ -82,7 +82,7 @@ def small_finding(file: str, line: int, severity: str = "warning") -> Finding:
 
 def test_findings_are_grouped_by_file_and_ordered_by_line_then_severity():
     review = Review(
-        context=ReviewContext(repo=True, files_changed=2),
+        context=ReviewContext(files_changed=2),
         findings=[
             small_finding("models/b.sql", 1),
             small_finding("models/a.sql", 9),
@@ -92,7 +92,7 @@ def test_findings_are_grouped_by_file_and_ordered_by_line_then_severity():
     )
     assert render_text(review) == "\n".join(
         [
-            "dbt-review · 2 files changed · context: repo",
+            "dbt-review · 2 files changed",
             "",
             "models/a.sql",
             "  3      error    check (rule)",
@@ -115,7 +115,7 @@ def test_findings_are_grouped_by_file_and_ordered_by_line_then_severity():
 
 def review_with_a_warning_and_an_info() -> Review:
     return Review(
-        context=ReviewContext(repo=True, files_changed=1),
+        context=ReviewContext(files_changed=1),
         findings=[
             small_finding("models/a.sql", 1),
             small_finding("models/a.sql", 2, severity="info"),
@@ -126,7 +126,7 @@ def review_with_a_warning_and_an_info() -> Review:
 def test_info_findings_are_hidden_by_default_but_still_counted():
     assert render_text(review_with_a_warning_and_an_info()) == "\n".join(
         [
-            "dbt-review · 1 file changed · context: repo",
+            "dbt-review · 1 file changed",
             "",
             "models/a.sql",
             "  1      warning  check (rule)",
@@ -145,11 +145,11 @@ def test_info_findings_are_shown_on_request():
 
 def test_json_carries_context_summary_and_every_field_of_a_finding():
     review = Review(
-        context=ReviewContext(repo=True, base="duckdb", files_changed=2),
+        context=ReviewContext(base="duckdb", files_changed=2),
         findings=[fanout_finding()],
     )
     assert json.loads(render_json(review)) == {
-        "context": {"repo": True, "base": "duckdb", "files_changed": 2},
+        "context": {"base": "duckdb", "files_changed": 2},
         "summary": {"errors": 0, "warnings": 1, "infos": 0},
         "skipped": [],
         "findings": [
@@ -182,7 +182,7 @@ def test_json_hides_info_findings_like_the_text_report_and_still_counts_them():
 
 def review_with_skipped_checks() -> Review:
     return Review(
-        context=ReviewContext(repo=False, files_changed=1),
+        context=ReviewContext(files_changed=1),
         skipped=[
             Skipped(check_id="select-star", reason="no dbt project"),
             Skipped(check_id="hardcoded-relation", reason="no dbt project"),

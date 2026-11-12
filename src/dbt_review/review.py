@@ -8,10 +8,9 @@ from dbt_review.models import Finding, Review, ReviewContext
 
 def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
     changed = parse_diff(diff_text)
-    has_project = (repo / "dbt_project.yml").is_file()
-    context = ReviewContext(repo=has_project, base=base, files_changed=len(changed))
-    if not has_project:
+    if not (repo / "dbt_project.yml").is_file():
         raise ToolError(f"no dbt project at {repo} (dbt_project.yml not found); the review needs the code")
+    context = ReviewContext(base=base, files_changed=len(changed))
     return Review(context=context, findings=_rule_findings(repo, changed))
 
 

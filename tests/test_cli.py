@@ -58,11 +58,6 @@ def test_without_a_dbt_project_the_tool_refuses_to_review(tmp_path, capsys):
     assert "no dbt project" in capsys.readouterr().err
 
 
-def test_with_a_dbt_project_the_review_says_it_saw_the_repo(dbt_project, capsys):
-    main(review_of(dbt_project, STAR_DIFF))
-    assert "context: repo" in capsys.readouterr().out
-
-
 def test_dash_reads_the_diff_from_standard_input(dbt_project, monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", io.StringIO(STAR_DIFF))
     assert main(["--repo", str(dbt_project), "--diff", "-"]) == ExitCode.OK
