@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import sys
+from enum import IntEnum
 from pathlib import Path
 
 from dbt_review.diff import git_diff, parse_diff
@@ -10,16 +11,18 @@ from dbt_review.models import Review, ReviewContext, Severity
 from dbt_review.report import render_json, render_text
 from dbt_review.review import run_checks
 
-EXIT_OK = 0
-EXIT_FOUND_ERRORS = 1
-EXIT_TOOL_FAILED = 2  # the tool broke; says nothing about the change under review
+
+class ExitCode(IntEnum):
+    OK = 0
+    FOUND_ERRORS = 1
+    TOOL_FAILED = 2  # the tool broke; says nothing about the change under review
 
 
 class ToolError(Exception):
     """The tool cannot run with the input it was given."""
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> ExitCode:
     # Windows would otherwise pick a legacy code page.
     sys.stdout.reconfigure(encoding="utf-8")
     args = _parse_arguments(argv)
@@ -27,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
         diff_text = _read_diff(args)
     except ToolError as error:
         print(f"dbt-review: {error}", file=sys.stderr)
-        return EXIT_TOOL_FAILED
+        return ExitCode.TOOL_FAILED
     changed = parse_diff(diff_text)
     repo = Path(args.repo)
     has_repo = (repo / "dbt_project.yml").is_file()
@@ -35,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     review = Review(context=context, findings=run_checks(repo, changed) if has_repo else [])
     render = render_json if args.format == "json" else render_text
     print(render(review))
-    return EXIT_FOUND_ERRORS if review.count(Severity.ERROR) else EXIT_OK
+    return ExitCode.FOUND_ERRORS if review.count(Severity.ERROR) else ExitCode.OK
 
 
 def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:

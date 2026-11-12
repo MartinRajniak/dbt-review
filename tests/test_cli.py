@@ -6,23 +6,23 @@ from pathlib import Path
 
 import pytest
 
-from dbt_review.cli import EXIT_FOUND_ERRORS, EXIT_OK, EXIT_TOOL_FAILED, main
+from dbt_review.cli import ExitCode, main
 
 FANOUT_DIFF = str(Path(__file__).parent.parent / "examples" / "fanout-join" / "input.diff")
 
 
 def test_no_input_is_a_tool_failure_not_a_review_result(capsys):
-    assert main([]) == EXIT_TOOL_FAILED
+    assert main([]) == ExitCode.TOOL_FAILED
     assert "nothing to review" in capsys.readouterr().err
 
 
 def test_diff_file_is_reviewed_and_the_report_printed(capsys):
-    assert main(["--diff", FANOUT_DIFF]) == EXIT_OK
+    assert main(["--diff", FANOUT_DIFF]) == ExitCode.OK
     assert capsys.readouterr().out.startswith("dbt-review · 2 files changed")
 
 
 def test_unreadable_diff_file_is_a_tool_failure(tmp_path, capsys):
-    assert main(["--diff", str(tmp_path / "missing.diff")]) == EXIT_TOOL_FAILED
+    assert main(["--diff", str(tmp_path / "missing.diff")]) == ExitCode.TOOL_FAILED
     assert "cannot read diff file" in capsys.readouterr().err
 
 
@@ -39,12 +39,12 @@ def test_with_a_dbt_project_the_review_says_it_saw_the_repo(tmp_path, capsys):
 
 def test_dash_reads_the_diff_from_standard_input(monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", io.StringIO(Path(FANOUT_DIFF).read_text(encoding="utf-8")))
-    assert main(["--diff", "-"]) == EXIT_OK
+    assert main(["--diff", "-"]) == ExitCode.OK
     assert "2 files changed" in capsys.readouterr().out
 
 
 def test_format_json_prints_the_review_as_json(capsys):
-    assert main(["--diff", FANOUT_DIFF, "--format", "json"]) == EXIT_OK
+    assert main(["--diff", FANOUT_DIFF, "--format", "json"]) == ExitCode.OK
     assert json.loads(capsys.readouterr().out)["context"]["files_changed"] == 2
 
 
@@ -76,17 +76,17 @@ def repo_on_a_branch(tmp_path):
 
 
 def test_base_reviews_only_what_the_branch_changed_since_it_left_base(repo_on_a_branch, capsys):
-    assert main(["--repo", str(repo_on_a_branch), "--base", "main"]) == EXIT_OK
+    assert main(["--repo", str(repo_on_a_branch), "--base", "main"]) == ExitCode.OK
     assert capsys.readouterr().out.startswith("dbt-review · base main · 1 file changed")
 
 
 def test_unknown_base_is_a_tool_failure(repo_on_a_branch, capsys):
-    assert main(["--repo", str(repo_on_a_branch), "--base", "nope"]) == EXIT_TOOL_FAILED
+    assert main(["--repo", str(repo_on_a_branch), "--base", "nope"]) == ExitCode.TOOL_FAILED
     assert "git diff against 'nope' failed" in capsys.readouterr().err
 
 
 def test_base_and_diff_together_are_rejected(capsys):
-    assert main(["--base", "main", "--diff", FANOUT_DIFF]) == EXIT_TOOL_FAILED
+    assert main(["--base", "main", "--diff", FANOUT_DIFF]) == ExitCode.TOOL_FAILED
     assert "either --base or --diff" in capsys.readouterr().err
 
 
@@ -171,10 +171,10 @@ def test_every_rule_runs_on_a_changed_model(hardcoded_change, capsys):
 
 
 def test_an_error_finding_fails_the_run(hardcoded_change):
-    assert main(hardcoded_change) == EXIT_FOUND_ERRORS
+    assert main(hardcoded_change) == ExitCode.FOUND_ERRORS
 
 
 def test_warnings_alone_do_not_fail_the_run(dbt_project, tmp_path):
     (tmp_path / "change.diff").write_text(STAR_DIFF)
 
-    assert main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")]) == EXIT_OK
+    assert main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")]) == ExitCode.OK
