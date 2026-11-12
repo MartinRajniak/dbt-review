@@ -1,5 +1,4 @@
-from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
-from pydantic_ai.models.function import AgentInfo, FunctionModel
+from helpers import model_answering
 
 from dbt_review.llm_check import ModelContext, render_prompt, review_model, reviewer
 from dbt_review.manifest import ModelFacts
@@ -47,15 +46,6 @@ def test_prompt_says_so_when_a_model_has_no_column_tests():
     context.inputs.append(ModelFacts("raw_refunds", [], {}))
 
     assert "- raw_refunds: no column tests\n" in render_prompt(context)
-
-
-def model_answering(*findings: dict) -> FunctionModel:
-    """A fake LLM that returns these findings whatever it is asked."""
-
-    def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"findings": list(findings)})])
-
-    return FunctionModel(answer)
 
 
 FANOUT = {
