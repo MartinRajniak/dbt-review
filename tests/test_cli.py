@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 
 import pytest
+from helpers import model_answering, model_node, write_manifest
 
 from dbt_review.cli import ExitCode, main
+from dbt_review.llm_check import reviewer
 
 FANOUT_DIFF = str(Path(__file__).parent.parent / "examples" / "fanout-join" / "input.diff")
 
@@ -188,3 +190,28 @@ def test_checkout_from_before_the_change_is_refused(dbt_project, capsys):
 def test_changed_file_missing_from_the_checkout_is_refused(dbt_project, capsys):
     assert main(review_of(dbt_project, HARDCODED_DIFF)) == ExitCode.TOOL_FAILED
     assert "models/orders.sql is in the diff but not in the checkout" in capsys.readouterr().err
+
+
+@pytest.fixture
+def parsed_project(dbt_project):
+    """The dbt project after `dbt parse` has written its manifest."""
+    (dbt_project / "target").mkdir()
+    customers = model_node("customers", "models/customers.sql", reads=("stg_customers",))
+    write_manifest(dbt_project / "target", customers)
+    return dbt_project
+
+
+LLM_WARNING = {
+    "check_id": "join-fanout",
+    "severity": "warning",
+    "line": 1,
+    "message": "This join returns one row per payment.",
+    "evidence": ["stg_payments has no unique test on order_id"],
+}
+
+
+def test_llm_findings_on_changed_models_are_reported(parsed_project, capsys):
+    with reviewer.override(model=model_answering(LLM_WARNING)):
+        main(review_of(parsed_project, STAR_DIFF))
+
+    assert "  1      warning  join-fanout (llm)" in capsys.readouterr().out
