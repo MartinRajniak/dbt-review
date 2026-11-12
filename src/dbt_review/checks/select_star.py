@@ -37,14 +37,16 @@ def _open_stars(select: exp.Select, ctes: dict[str, exp.Select]) -> list[exp.Sta
 
 def _output_select(select: exp.Select, ctes: dict[str, exp.Select]) -> exp.Select:
     """A closing `select * from final` names no columns; the select inside `final` does."""
-    while _is_pass_through(select) and _tables(select)[0].name in ctes:
-        select = ctes[_tables(select)[0].name]
+    while (source := _passed_through(select)) in ctes:
+        select = ctes[source]
     return select
 
 
-def _is_pass_through(select: exp.Select) -> bool:
+def _passed_through(select: exp.Select) -> str:
+    """The table a bare `select * from x` reads; empty when the select is anything else."""
+    tables = _tables(select)
     only_a_star = len(select.expressions) == 1 and isinstance(select.expressions[0], exp.Star)
-    return only_a_star and len(_tables(select)) == 1
+    return tables[0].name if only_a_star and len(tables) == 1 else ""
 
 
 def _stars(select: exp.Select) -> list[exp.Star]:
