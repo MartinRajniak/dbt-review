@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from dbt_review.cli import EXIT_OK, EXIT_TOOL_FAILED, main
+from dbt_review.cli import EXIT_FOUND_ERRORS, EXIT_OK, EXIT_TOOL_FAILED, main
 
 FANOUT_DIFF = str(Path(__file__).parent.parent / "examples" / "fanout-join" / "input.diff")
 
@@ -168,3 +168,13 @@ def test_every_rule_runs_on_a_changed_model(hardcoded_change, capsys):
     main(hardcoded_change)
 
     assert "  1      error    hardcoded-relation (rule)" in capsys.readouterr().out
+
+
+def test_an_error_finding_fails_the_run(hardcoded_change):
+    assert main(hardcoded_change) == EXIT_FOUND_ERRORS
+
+
+def test_warnings_alone_do_not_fail_the_run(dbt_project, tmp_path):
+    (tmp_path / "change.diff").write_text(STAR_DIFF)
+
+    assert main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")]) == EXIT_OK

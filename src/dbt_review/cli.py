@@ -6,11 +6,12 @@ import sys
 from pathlib import Path
 
 from dbt_review.diff import git_diff, parse_diff
-from dbt_review.models import Review, ReviewContext
+from dbt_review.models import Review, ReviewContext, Severity
 from dbt_review.report import render_json, render_text
 from dbt_review.review import run_checks
 
 EXIT_OK = 0
+EXIT_FOUND_ERRORS = 1
 EXIT_TOOL_FAILED = 2  # the tool broke; says nothing about the change under review
 
 
@@ -34,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     review = Review(context=context, findings=run_checks(repo, changed) if has_repo else [])
     render = render_json if args.format == "json" else render_text
     print(render(review))
-    return EXIT_OK
+    return EXIT_FOUND_ERRORS if review.count(Severity.ERROR) else EXIT_OK
 
 
 def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
