@@ -2,7 +2,8 @@ from pathlib import Path
 
 from dbt_review.checks import RULES
 from dbt_review.diff import ChangedFile, parse_diff
-from dbt_review.models import Finding, Review, ReviewContext, Skipped
+from dbt_review.errors import ToolError
+from dbt_review.models import Finding, Review, ReviewContext
 
 
 def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
@@ -10,12 +11,8 @@ def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
     has_project = (repo / "dbt_project.yml").is_file()
     context = ReviewContext(repo=has_project, base=base, files_changed=len(changed))
     if not has_project:
-        return Review(context=context, skipped=_every_rule("no dbt project"))
+        raise ToolError(f"no dbt project at {repo} (dbt_project.yml not found); the review needs the code")
     return Review(context=context, findings=_rule_findings(repo, changed))
-
-
-def _every_rule(reason: str) -> list[Skipped]:
-    return [Skipped(check_id=rule.check_id, reason=reason) for rule in RULES]
 
 
 def _rule_findings(project: Path, changed: list[ChangedFile]) -> list[Finding]:

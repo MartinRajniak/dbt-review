@@ -8,6 +8,7 @@ from enum import IntEnum
 from pathlib import Path
 
 from dbt_review.diff import git_diff
+from dbt_review.errors import ToolError
 from dbt_review.models import Severity
 from dbt_review.report import render_json, render_text
 from dbt_review.review import review_diff
@@ -19,21 +20,16 @@ class ExitCode(IntEnum):
     TOOL_FAILED = 2  # the tool broke; says nothing about the change under review
 
 
-class ToolError(Exception):
-    """The tool cannot run with the input it was given."""
-
-
 def main(argv: list[str] | None = None) -> ExitCode:
     # Windows would otherwise pick a legacy code page.
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8")
     args = _parse_arguments(argv)
     try:
-        diff_text = _read_diff(args)
+        review = review_diff(_read_diff(args), Path(args.repo), args.base)
     except ToolError as error:
         print(f"dbt-review: {error}", file=sys.stderr)
         return ExitCode.TOOL_FAILED
-    review = review_diff(diff_text, Path(args.repo), args.base)
     render = render_json if args.format == "json" else render_text
     print(render(review))
     return ExitCode.FOUND_ERRORS if review.count(Severity.ERROR) else ExitCode.OK

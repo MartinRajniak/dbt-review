@@ -53,9 +53,9 @@ def test_unreadable_diff_file_is_a_tool_failure(tmp_path, capsys):
     assert "cannot read diff file" in capsys.readouterr().err
 
 
-def test_without_a_dbt_project_the_review_says_it_only_saw_the_diff(tmp_path, capsys):
-    main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF])
-    assert "context: diff-only" in capsys.readouterr().out
+def test_without_a_dbt_project_the_tool_refuses_to_review(tmp_path, capsys):
+    assert main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF]) == ExitCode.TOOL_FAILED
+    assert "no dbt project" in capsys.readouterr().err
 
 
 def test_with_a_dbt_project_the_review_says_it_saw_the_repo(dbt_project, capsys):
@@ -179,10 +179,3 @@ def test_an_error_finding_fails_the_run(hardcoded_change):
 
 def test_warnings_alone_do_not_fail_the_run(dbt_project):
     assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.OK
-
-
-def test_without_a_dbt_project_every_rule_is_reported_as_skipped(tmp_path, capsys):
-    main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF])
-
-    last_line = capsys.readouterr().out.splitlines()[-1]
-    assert last_line == "skipped (no dbt project): select-star, hardcoded-relation"
