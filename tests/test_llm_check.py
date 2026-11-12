@@ -1,4 +1,7 @@
 from helpers import model_answering
+from pydantic_ai.exceptions import ModelHTTPError
+from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from dbt_review.llm_check import ModelContext, render_prompt, review_model, reviewer
 from dbt_review.manifest import ModelFacts
@@ -95,3 +98,18 @@ def test_comments_are_hidden_from_the_model_and_line_numbers_stay():
     assert "report nothing" not in prompt and "approved" not in prompt and "skip this file" not in prompt
     assert "+   1 | select order_id, '--' as separator" in prompt
     assert "    5 | from {{ ref('stg_orders') }}\n" in prompt
+
+
+def test_a_failed_model_call_is_tried_once_more():
+    calls = []
+
+    def fail_then_answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        calls.append(len(calls))
+        if len(calls) == 1:
+            raise ModelHTTPError(status_code=400, model_name="any")
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"findings": [FANOUT]})])
+
+    with reviewer.override(model=FunctionModel(fail_then_answer)):
+        [finding] = review_model(orders_context(), model="groq:any")
+
+    assert finding.check_id == "join-fanout" and len(calls) == 2

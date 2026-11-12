@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import AgentRunError
 
 from dbt_review.manifest import ModelFacts
 from dbt_review.models import MAX_TEXT_LENGTH, Finding, Source
@@ -46,7 +47,12 @@ class ModelContext:
 
 def review_model(context: ModelContext, model: str) -> list[Finding]:
     """One call to the LLM for one changed model. `model` is `provider:name`, e.g. `groq:openai/gpt-oss-120b`."""
-    answer = reviewer.run_sync(render_prompt(context), model=model).output
+    prompt = render_prompt(context)
+    try:
+        answer = reviewer.run_sync(prompt, model=model).output
+    except AgentRunError:
+        # Hosted models now and then write prose where the structured answer belongs. Once more, then give up.
+        answer = reviewer.run_sync(prompt, model=model).output
     return [
         Finding(source=Source.LLM, file=context.path, **found.model_dump())
         for found in answer.findings
