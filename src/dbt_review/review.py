@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dbt_review.checks import RULES
@@ -8,6 +9,8 @@ from dbt_review.manifest import load_manifest
 from dbt_review.models import Finding, Review, ReviewContext, Skipped
 
 DEFAULT_MODEL = "groq:openai/gpt-oss-120b"
+# The environment variable each provider's key is read from.
+API_KEYS = {"groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 
 
 def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
@@ -51,6 +54,9 @@ def _llm_findings(
     manifest_path = project / "target" / "manifest.json"
     if not manifest_path.is_file():
         return [], [_llm_skipped("no target/manifest.json: run `dbt parse`")]
+    key = API_KEYS.get(model.split(":")[0])
+    if key and not os.environ.get(key):
+        return [], [_llm_skipped(f"{key} is not set")]
     manifest = load_manifest(manifest_path)
     findings = []
     for file in changed:

@@ -193,8 +193,9 @@ def test_changed_file_missing_from_the_checkout_is_refused(dbt_project, capsys):
 
 
 @pytest.fixture
-def parsed_project(dbt_project):
-    """The dbt project after `dbt parse` has written its manifest."""
+def parsed_project(dbt_project, monkeypatch):
+    """The dbt project after `dbt parse` has written its manifest, with a key for the default model."""
+    monkeypatch.setenv("GROQ_API_KEY", "not-a-real-key")
     (dbt_project / "target").mkdir()
     customers = model_node("customers", "models/customers.sql", reads=("stg_customers",))
     write_manifest(dbt_project / "target", customers)
@@ -222,3 +223,11 @@ def test_without_a_manifest_the_llm_check_is_reported_as_skipped(dbt_project, ca
 
     last_line = capsys.readouterr().out.splitlines()[-1]
     assert last_line == "skipped (no target/manifest.json: run `dbt parse`): llm-review"
+
+
+def test_without_an_api_key_the_llm_check_is_reported_as_skipped(parsed_project, monkeypatch, capsys):
+    monkeypatch.delenv("GROQ_API_KEY")
+
+    main(review_of(parsed_project, STAR_DIFF))
+
+    assert capsys.readouterr().out.splitlines()[-1] == "skipped (GROQ_API_KEY is not set): llm-review"
