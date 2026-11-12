@@ -10,15 +10,42 @@ from dbt_review.cli import ExitCode, main
 
 FANOUT_DIFF = str(Path(__file__).parent.parent / "examples" / "fanout-join" / "input.diff")
 
+STAR_DIFF = """\
+diff --git a/models/customers.sql b/models/customers.sql
+--- a/models/customers.sql
++++ b/models/customers.sql
+@@ -1,3 +1,3 @@
+-select customer_id
++select *
+ 
+ from {{ ref('stg_customers') }}
+"""
+
+
+@pytest.fixture
+def dbt_project(tmp_path):
+    """A dbt project checked out after the change in STAR_DIFF."""
+    (tmp_path / "dbt_project.yml").write_text("name: shop\n")
+    (tmp_path / "models").mkdir()
+    (tmp_path / "models" / "customers.sql").write_text("select *\n\nfrom {{ ref('stg_customers') }}\n")
+    return tmp_path
+
+
+def review_of(project: Path, diff_text: str) -> list[str]:
+    """Command line arguments that review `diff_text` against `project`."""
+    diff_file = project / "change.diff"
+    diff_file.write_text(diff_text)
+    return ["--repo", str(project), "--diff", str(diff_file)]
+
 
 def test_no_input_is_a_tool_failure_not_a_review_result(capsys):
     assert main([]) == ExitCode.TOOL_FAILED
     assert "nothing to review" in capsys.readouterr().err
 
 
-def test_diff_file_is_reviewed_and_the_report_printed(capsys):
-    assert main(["--diff", FANOUT_DIFF]) == ExitCode.OK
-    assert capsys.readouterr().out.startswith("dbt-review · 2 files changed")
+def test_diff_file_is_reviewed_and_the_report_printed(dbt_project, capsys):
+    assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.OK
+    assert capsys.readouterr().out.startswith("dbt-review · 1 file changed")
 
 
 def test_unreadable_diff_file_is_a_tool_failure(tmp_path, capsys):
@@ -31,21 +58,20 @@ def test_without_a_dbt_project_the_review_says_it_only_saw_the_diff(tmp_path, ca
     assert "context: diff-only" in capsys.readouterr().out
 
 
-def test_with_a_dbt_project_the_review_says_it_saw_the_repo(tmp_path, capsys):
-    (tmp_path / "dbt_project.yml").write_text("name: jaffle_shop")
-    main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF])
+def test_with_a_dbt_project_the_review_says_it_saw_the_repo(dbt_project, capsys):
+    main(review_of(dbt_project, STAR_DIFF))
     assert "context: repo" in capsys.readouterr().out
 
 
-def test_dash_reads_the_diff_from_standard_input(monkeypatch, capsys):
-    monkeypatch.setattr("sys.stdin", io.StringIO(Path(FANOUT_DIFF).read_text(encoding="utf-8")))
-    assert main(["--diff", "-"]) == ExitCode.OK
-    assert "2 files changed" in capsys.readouterr().out
+def test_dash_reads_the_diff_from_standard_input(dbt_project, monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin", io.StringIO(STAR_DIFF))
+    assert main(["--repo", str(dbt_project), "--diff", "-"]) == ExitCode.OK
+    assert "1 file changed" in capsys.readouterr().out
 
 
-def test_format_json_prints_the_review_as_json(capsys):
-    assert main(["--diff", FANOUT_DIFF, "--format", "json"]) == ExitCode.OK
-    assert json.loads(capsys.readouterr().out)["context"]["files_changed"] == 2
+def test_format_json_prints_the_review_as_json(dbt_project, capsys):
+    assert main([*review_of(dbt_project, STAR_DIFF), "--format", "json"]) == ExitCode.OK
+    assert json.loads(capsys.readouterr().out)["context"]["files_changed"] == 1
 
 
 def git(repo: Path, *arguments: str) -> None:
@@ -54,13 +80,14 @@ def git(repo: Path, *arguments: str) -> None:
 
 @pytest.fixture
 def repo_on_a_branch(tmp_path):
-    """A repo where branch `change` edits orders.sql, and `main` has moved on since."""
+    """A dbt project where branch `change` edits orders.sql, and `main` has moved on since."""
     orders, customers = tmp_path / "models" / "orders.sql", tmp_path / "models" / "customers.sql"
     orders.parent.mkdir()
     git(tmp_path, "init", "-q", "-b", "main")
     git(tmp_path, "config", "user.email", "test@example.com")
     git(tmp_path, "config", "user.name", "Test")
     git(tmp_path, "config", "commit.gpgsign", "false")
+    (tmp_path / "dbt_project.yml").write_text("name: shop\n")
     orders.write_text("select 1\n")
     customers.write_text("select 1\n")
     git(tmp_path, "add", "-A")
@@ -86,44 +113,16 @@ def test_unknown_base_is_a_tool_failure(repo_on_a_branch, capsys):
 
 
 def test_base_and_diff_together_are_rejected(capsys):
-    assert main(["--base", "main", "--diff", FANOUT_DIFF]) == ExitCode.TOOL_FAILED
+    assert main(["--base", "main", "--diff", "change.diff"]) == ExitCode.TOOL_FAILED
     assert "either --base or --diff" in capsys.readouterr().err
 
 
-def test_output_is_utf8_whatever_the_console_code_page():
+def test_output_is_utf8_whatever_the_console_code_page(dbt_project):
     """Run as a real process: on Windows, piped output otherwise uses a legacy code page."""
     run_main = "import sys; from dbt_review.cli import main; sys.exit(main())"
-    result = subprocess.run(
-        [sys.executable, "-c", run_main, "--diff", FANOUT_DIFF], capture_output=True, check=True
-    )
-    assert result.stdout.decode("utf-8").startswith("dbt-review · 2 files changed")
-
-
-STAR_DIFF = """\
-diff --git a/models/customers.sql b/models/customers.sql
---- a/models/customers.sql
-+++ b/models/customers.sql
-@@ -1,3 +1,3 @@
--select customer_id
-+select *
- 
- from {{ ref('stg_customers') }}
-"""
-
-
-@pytest.fixture
-def dbt_project(tmp_path):
-    (tmp_path / "dbt_project.yml").write_text("name: shop\n")
-    (tmp_path / "models").mkdir()
-    (tmp_path / "models" / "customers.sql").write_text("select *\n\nfrom {{ ref('stg_customers') }}\n")
-    return tmp_path
-
-
-def review_of(project: Path, diff_text: str) -> list[str]:
-    """Command line arguments that review `diff_text` against `project`."""
-    diff_file = project / "change.diff"
-    diff_file.write_text(diff_text)
-    return ["--repo", str(project), "--diff", str(diff_file)]
+    command = [sys.executable, "-c", run_main, *review_of(dbt_project, STAR_DIFF)]
+    result = subprocess.run(command, capture_output=True, check=True)
+    assert result.stdout.decode("utf-8").startswith("dbt-review · 1 file changed")
 
 
 def test_rule_findings_on_changed_models_are_reported(dbt_project, capsys):
