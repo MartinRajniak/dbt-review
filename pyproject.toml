@@ -2,6 +2,7 @@
 name = "dbt-review"
 version = "0.1.0"
 description = "Reviews dbt model changes: deterministic rules plus an LLM check, for use in CI."
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.14.3",

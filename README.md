@@ -190,3 +190,10 @@ commit. CI runs ruff, mypy in strict mode and the tests on every push.
 
 It was built with Claude Code as a pair. The design, the scope and the constraints were set by the author, who
 reviewed every commit and questioned the decisions recorded in the ADRs.
+About six and a half hours of the author's time went into it.
+
+## Licence
+
+MIT, see [LICENSE](LICENSE). The diffs in `examples/` quote the
+[jaffle_shop_duckdb](https://github.com/dbt-labs/jaffle_shop_duckdb) demo project by dbt Labs, which is
+licensed under Apache-2.0.
