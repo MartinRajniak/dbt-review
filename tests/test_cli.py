@@ -119,10 +119,15 @@ def dbt_project(tmp_path):
     return tmp_path
 
 
-def test_rule_findings_on_changed_models_are_reported(dbt_project, tmp_path, capsys):
-    (tmp_path / "change.diff").write_text(STAR_DIFF)
+def review_of(project: Path, diff_text: str) -> list[str]:
+    """Command line arguments that review `diff_text` against `project`."""
+    diff_file = project / "change.diff"
+    diff_file.write_text(diff_text)
+    return ["--repo", str(project), "--diff", str(diff_file)]
 
-    main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")])
+
+def test_rule_findings_on_changed_models_are_reported(dbt_project, capsys):
+    main(review_of(dbt_project, STAR_DIFF))
 
     out = capsys.readouterr().out
     assert "models/customers.sql\n  1      warning  select-star (rule)" in out
@@ -141,10 +146,8 @@ diff --git a/models/customers.sql b/models/customers.sql
 """
 
 
-def test_problems_the_change_did_not_introduce_are_not_reported(dbt_project, tmp_path, capsys):
-    (tmp_path / "change.diff").write_text(UNRELATED_DIFF)
-
-    main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")])
+def test_problems_the_change_did_not_introduce_are_not_reported(dbt_project, capsys):
+    main(review_of(dbt_project, UNRELATED_DIFF))
 
     assert "0 errors · 0 warnings" in capsys.readouterr().out
 
@@ -160,10 +163,9 @@ new file mode 100644
 
 
 @pytest.fixture
-def hardcoded_change(dbt_project, tmp_path):
+def hardcoded_change(dbt_project):
     (dbt_project / "models" / "orders.sql").write_text("select order_id from main.stg_orders\n")
-    (tmp_path / "change.diff").write_text(HARDCODED_DIFF)
-    return ["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")]
+    return review_of(dbt_project, HARDCODED_DIFF)
 
 
 def test_every_rule_runs_on_a_changed_model(hardcoded_change, capsys):
@@ -176,10 +178,8 @@ def test_an_error_finding_fails_the_run(hardcoded_change):
     assert main(hardcoded_change) == ExitCode.FOUND_ERRORS
 
 
-def test_warnings_alone_do_not_fail_the_run(dbt_project, tmp_path):
-    (tmp_path / "change.diff").write_text(STAR_DIFF)
-
-    assert main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")]) == ExitCode.OK
+def test_warnings_alone_do_not_fail_the_run(dbt_project):
+    assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.OK
 
 
 def test_without_a_dbt_project_every_rule_is_reported_as_skipped(tmp_path, capsys):
