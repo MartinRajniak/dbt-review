@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from unidiff import PatchedFile, PatchSet
+from unidiff.patch import PatchedFile, PatchSet
 
 DBT_SUFFIXES = {".sql", ".yml", ".yaml"}
 
@@ -34,7 +34,8 @@ def parse_diff(diff_text: str) -> list[ChangedFile]:
 
 
 def _added_lines(patched_file: PatchedFile) -> list[int]:
-    return [line.target_line_no for hunk in patched_file for line in hunk if line.is_added]
+    numbers = [line.target_line_no for hunk in patched_file for line in hunk if line.is_added]
+    return [number for number in numbers if number is not None]
 
 
 def _is_dbt_file(path: str) -> bool:

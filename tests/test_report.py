@@ -77,9 +77,7 @@ def test_finding_without_range_evidence_or_fix_takes_two_lines():
 
 
 def small_finding(file: str, line: int, severity: str = "warning") -> Finding:
-    return Finding(
-        check_id="check", source="rule", severity=severity, file=file, line=line, message="m"
-    )
+    return Finding(check_id="check", source="rule", severity=severity, file=file, line=line, message="m")
 
 
 def test_findings_are_grouped_by_file_and_ordered_by_line_then_severity():

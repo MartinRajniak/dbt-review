@@ -1,6 +1,7 @@
 """Command line entry point."""
 
 import argparse
+import io
 import subprocess
 import sys
 from enum import IntEnum
@@ -24,7 +25,8 @@ class ToolError(Exception):
 
 def main(argv: list[str] | None = None) -> ExitCode:
     # Windows would otherwise pick a legacy code page.
-    sys.stdout.reconfigure(encoding="utf-8")
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(encoding="utf-8")
     args = _parse_arguments(argv)
     try:
         diff_text = _read_diff(args)
@@ -42,9 +44,7 @@ def main(argv: list[str] | None = None) -> ExitCode:
 
 
 def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        prog="dbt-review", description="Review dbt model changes in a git diff."
-    )
+    parser = argparse.ArgumentParser(prog="dbt-review", description="Review dbt model changes in a git diff.")
     parser.add_argument("--repo", default=".", help="dbt project under review (default: here)")
     parser.add_argument("--base", help="git ref the checked-out branch is compared against")
     parser.add_argument("--diff", help="file holding the diff to review, or - for standard input")

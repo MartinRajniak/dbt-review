@@ -93,7 +93,9 @@ def test_base_and_diff_together_are_rejected(capsys):
 def test_output_is_utf8_whatever_the_console_code_page():
     """Run as a real process: on Windows, piped output otherwise uses a legacy code page."""
     run_main = "import sys; from dbt_review.cli import main; sys.exit(main())"
-    result = subprocess.run([sys.executable, "-c", run_main, "--diff", FANOUT_DIFF], capture_output=True)
+    result = subprocess.run(
+        [sys.executable, "-c", run_main, "--diff", FANOUT_DIFF], capture_output=True, check=True
+    )
     assert result.stdout.decode("utf-8").startswith("dbt-review · 2 files changed")
 
 

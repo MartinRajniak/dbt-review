@@ -13,7 +13,11 @@ dependencies = [
 dbt-review = "dbt_review.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "mypy>=2.4.1",
+    "pytest>=8",
+    "ruff>=0.17.4",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -24,3 +28,13 @@ packages = ["src/dbt_review"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+ignore = ["FLY002"]  # expected reports in tests read better as a list of lines
+
+[tool.mypy]
+strict = true
+files = ["src"]

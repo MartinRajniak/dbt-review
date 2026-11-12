@@ -5,9 +5,14 @@ from dbt_review.models import Finding
 
 
 def finding_with(**overrides) -> Finding:
-    fields = dict(
-        check_id="check", source="rule", severity="warning", file="a.sql", line=1, message="m"
-    )
+    fields = {
+        "check_id": "check",
+        "source": "rule",
+        "severity": "warning",
+        "file": "a.sql",
+        "line": 1,
+        "message": "m",
+    }
     return Finding(**(fields | overrides))
 
 

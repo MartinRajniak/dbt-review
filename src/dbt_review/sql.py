@@ -15,7 +15,7 @@ JINJA_EXPRESSION = re.compile(r"\{\{.*?\}\}")
 PLACEHOLDER_PREFIX = "__"
 
 
-def parse_model(sql: str) -> exp.Expression:
+def parse_model(sql: str) -> exp.Expr:
     sql = JINJA_BLOCK.sub(lambda block: "\n" * block.group().count("\n"), sql)
     sql = JINJA_REF.sub(rf"{PLACEHOLDER_PREFIX}ref__\1", sql)
     sql = JINJA_EXPRESSION.sub(f"{PLACEHOLDER_PREFIX}jinja__", sql)
