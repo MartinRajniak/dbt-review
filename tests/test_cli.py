@@ -215,3 +215,10 @@ def test_llm_findings_on_changed_models_are_reported(parsed_project, capsys):
         main(review_of(parsed_project, STAR_DIFF))
 
     assert "  1      warning  join-fanout (llm)" in capsys.readouterr().out
+
+
+def test_without_a_manifest_the_llm_check_is_reported_as_skipped(dbt_project, capsys):
+    main(review_of(dbt_project, STAR_DIFF))
+
+    last_line = capsys.readouterr().out.splitlines()[-1]
+    assert last_line == "skipped (no target/manifest.json: run `dbt parse`): llm-review"

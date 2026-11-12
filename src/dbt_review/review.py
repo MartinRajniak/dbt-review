@@ -5,7 +5,7 @@ from dbt_review.diff import ChangedFile, parse_diff
 from dbt_review.errors import ToolError
 from dbt_review.llm_check import ModelContext, review_model
 from dbt_review.manifest import load_manifest
-from dbt_review.models import Finding, Review, ReviewContext
+from dbt_review.models import Finding, Review, ReviewContext, Skipped
 
 DEFAULT_MODEL = "groq:openai/gpt-oss-120b"
 
@@ -16,8 +16,8 @@ def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
         raise ToolError(f"no dbt project at {repo} (dbt_project.yml not found); the review needs the code")
     _require_matching_checkout(repo, changed)
     context = ReviewContext(base=base, files_changed=len(changed))
-    findings = _rule_findings(repo, changed) + _llm_findings(repo, changed, DEFAULT_MODEL)
-    return Review(context=context, findings=findings)
+    llm_findings, skipped = _llm_findings(repo, changed, DEFAULT_MODEL)
+    return Review(context=context, findings=_rule_findings(repo, changed) + llm_findings, skipped=skipped)
 
 
 def _require_matching_checkout(project: Path, changed: list[ChangedFile]) -> None:
@@ -44,11 +44,13 @@ def _rule_findings(project: Path, changed: list[ChangedFile]) -> list[Finding]:
     return findings
 
 
-def _llm_findings(project: Path, changed: list[ChangedFile], model: str) -> list[Finding]:
-    """One LLM call per changed model that dbt's manifest knows."""
+def _llm_findings(
+    project: Path, changed: list[ChangedFile], model: str
+) -> tuple[list[Finding], list[Skipped]]:
+    """One LLM call per changed model that dbt's manifest knows, or the reason the check could not run."""
     manifest_path = project / "target" / "manifest.json"
     if not manifest_path.is_file():
-        return []
+        return [], [_llm_skipped("no target/manifest.json: run `dbt parse`")]
     manifest = load_manifest(manifest_path)
     findings = []
     for file in changed:
@@ -62,4 +64,8 @@ def _llm_findings(project: Path, changed: list[ChangedFile], model: str) -> list
                 inputs=[known for name in facts.reads if (known := manifest.model_named(name))],
             )
             findings += review_model(context, model)
-    return findings
+    return findings, []
+
+
+def _llm_skipped(reason: str) -> Skipped:
+    return Skipped(check_id="llm-review", reason=reason)
