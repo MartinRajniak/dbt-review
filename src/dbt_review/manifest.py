@@ -10,17 +10,26 @@ from pydantic import BaseModel
 class ModelFacts:
     name: str
     reads: list[str]  # names of the models, seeds and sources it selects from
+    column_tests: dict[str, list[str]]  # column -> names of the tests on it, e.g. unique
 
 
 class _DependsOn(BaseModel):
     nodes: list[str] = []
 
 
+class _TestMetadata(BaseModel):
+    name: str
+
+
 class _Node(BaseModel):
+    unique_id: str
     resource_type: str
     name: str
     original_file_path: str
     depends_on: _DependsOn = _DependsOn()
+    attached_node: str | None = None
+    column_name: str | None = None
+    test_metadata: _TestMetadata | None = None
 
 
 class _ManifestFile(BaseModel):
@@ -36,11 +45,24 @@ class Manifest:
             if node.resource_type == "model"
         }
 
+        self._tests = [node for node in file.nodes.values() if node.resource_type == "test"]
+
     def model_at(self, path: str) -> ModelFacts | None:
         node = self._models.get(path)
         if node is None:
             return None
-        return ModelFacts(name=node.name, reads=[_name(unique_id) for unique_id in node.depends_on.nodes])
+        return ModelFacts(
+            name=node.name,
+            reads=[_name(unique_id) for unique_id in node.depends_on.nodes],
+            column_tests=self._column_tests(node.unique_id),
+        )
+
+    def _column_tests(self, model_id: str) -> dict[str, list[str]]:
+        tests: dict[str, list[str]] = {}
+        for test in self._tests:
+            if test.attached_node == model_id and test.column_name and test.test_metadata:
+                tests.setdefault(test.column_name, []).append(test.test_metadata.name)
+        return tests
 
 
 def load_manifest(path: Path) -> Manifest:
