@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from importlib import resources
 from typing import Literal
@@ -25,6 +26,8 @@ class LlmReview(BaseModel):
     findings: list[LlmFinding]
 
 
+# The library prints a banner on stderr at its first real call; CI logs should stay clean.
+os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 INSTRUCTIONS = resources.files("dbt_review").joinpath("instructions.md").read_text(encoding="utf-8")
 reviewer = Agent(output_type=LlmReview, instructions=INSTRUCTIONS)
 
