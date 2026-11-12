@@ -1,0 +1,10 @@
+dbt-review · base duckdb · 2 files changed
+
+models/orders.sql
+  57     warning  join-fanout (llm)
+         The left join to `payments` can duplicate rows per order because `stg_payments` does not have a unique key on `order_id`, breaking the model's unique test on `order_id`.
+         Evidence: Tests dbt declares on columns: orders: order_id (unique, not_null)
+                   Tests dbt declares on columns: stg_payments: payment_id (unique, not_null), payment_method (accepted_values)
+         Fix: Aggregate `payments` by `order_id` before joining, or join only the needed aggregated columns.
+
+0 errors · 1 warning · 0 info

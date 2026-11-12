@@ -1,0 +1,30 @@
+{
+  "context": {
+    "base": "duckdb",
+    "files_changed": 2
+  },
+  "summary": {
+    "errors": 0,
+    "warnings": 1,
+    "infos": 0
+  },
+  "skipped": [],
+  "findings": [
+    {
+      "check_id": "join-fanout",
+      "source": "llm",
+      "severity": "warning",
+      "file": "models/orders.sql",
+      "line": 55,
+      "end_line": null,
+      "message": "The left join to payments can create multiple rows per order because payments may contain several rows per order_id, breaking the orders model's unique order_id constraint.",
+      "evidence": [
+        "orders model declares a unique test on order_id (order_id unique, not_null).",
+        "stg_payments (source for payments) does NOT have a unique test on order_id.",
+        "+  55 |     left join payments",
+        "+  56 |         on orders.order_id = payments.order_id"
+      ],
+      "suggestion": "Aggregate payments by order_id before joining or join on a column that is unique in the payments side."
+    }
+  ]
+}

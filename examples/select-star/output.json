@@ -1,0 +1,25 @@
+{
+  "context": {
+    "base": "duckdb",
+    "files_changed": 1
+  },
+  "summary": {
+    "errors": 0,
+    "warnings": 1,
+    "infos": 0
+  },
+  "skipped": [],
+  "findings": [
+    {
+      "check_id": "select-star",
+      "source": "rule",
+      "severity": "warning",
+      "file": "models/customers.sql",
+      "line": 51,
+      "end_line": null,
+      "message": "The model's columns are not written out: a column added upstream appears here unannounced.",
+      "evidence": [],
+      "suggestion": "List the columns this model should return."
+    }
+  ]
+}

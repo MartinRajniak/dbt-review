@@ -1,0 +1,28 @@
+{
+  "context": {
+    "base": "duckdb",
+    "files_changed": 2
+  },
+  "summary": {
+    "errors": 0,
+    "warnings": 1,
+    "infos": 0
+  },
+  "skipped": [],
+  "findings": [
+    {
+      "check_id": "join-fanout",
+      "source": "llm",
+      "severity": "warning",
+      "file": "models/orders.sql",
+      "line": 57,
+      "end_line": null,
+      "message": "The left join to `payments` can duplicate rows per order because `stg_payments` does not have a unique key on `order_id`, breaking the model's unique test on `order_id`.",
+      "evidence": [
+        "Tests dbt declares on columns: orders: order_id (unique, not_null)",
+        "Tests dbt declares on columns: stg_payments: payment_id (unique, not_null), payment_method (accepted_values)"
+      ],
+      "suggestion": "Aggregate `payments` by `order_id` before joining, or join only the needed aggregated columns."
+    }
+  ]
+}

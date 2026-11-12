@@ -1,0 +1,14 @@
+dbt-review · base duckdb · 2 files changed
+
+models/staging/orders_cleaned_v2.sql
+  1      info     naming (llm)
+         The model name violates staging naming conventions by not using the `stg_` prefix and by including version/status suffixes.
+         Evidence: Model `orders_cleaned_v2` (models/staging/orders_cleaned_v2.sql) is a staging model but its name does not start with `stg_` and contains version suffix `_v2` and status suffix `_cleaned`.
+         Fix: Rename the model to something like `stg_orders`.
+
+  11     info     naming (llm)
+         Column alias `cust` is an abbreviation and not a full snake_case word.
+         Evidence: Line 11: `user_id as cust,`
+         Fix: Rename the alias to `customer_id`.
+
+0 errors · 0 warnings · 2 info

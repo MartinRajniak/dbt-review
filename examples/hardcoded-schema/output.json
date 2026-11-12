@@ -1,0 +1,25 @@
+{
+  "context": {
+    "base": "duckdb",
+    "files_changed": 1
+  },
+  "summary": {
+    "errors": 1,
+    "warnings": 0,
+    "infos": 0
+  },
+  "skipped": [],
+  "findings": [
+    {
+      "check_id": "hardcoded-relation",
+      "source": "rule",
+      "severity": "error",
+      "file": "models/orders.sql",
+      "line": 11,
+      "end_line": null,
+      "message": "`main.stg_payments` is named directly, so dbt does not know this model depends on it: build order and other environments can break.",
+      "evidence": [],
+      "suggestion": "Use {{ ref('stg_payments') }}, or {{ source(...) }} for a raw table."
+    }
+  ]
+}

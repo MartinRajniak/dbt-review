@@ -1,0 +1,8 @@
+dbt-review · base duckdb · 1 file changed
+
+models/customers.sql
+  51     warning  select-star (rule)
+         The model's columns are not written out: a column added upstream appears here unannounced.
+         Fix: List the columns this model should return.
+
+0 errors · 1 warning · 0 info

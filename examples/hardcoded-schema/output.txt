@@ -1,0 +1,8 @@
+dbt-review · base duckdb · 1 file changed
+
+models/orders.sql
+  11     error    hardcoded-relation (rule)
+         `main.stg_payments` is named directly, so dbt does not know this model depends on it: build order and other environments can break.
+         Fix: Use {{ ref('stg_payments') }}, or {{ source(...) }} for a raw table.
+
+1 error · 0 warnings · 0 info

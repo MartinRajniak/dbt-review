@@ -1,0 +1,13 @@
+{
+  "context": {
+    "base": "duckdb",
+    "files_changed": 2
+  },
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "infos": 0
+  },
+  "skipped": [],
+  "findings": []
+}

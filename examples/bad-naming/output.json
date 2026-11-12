@@ -1,0 +1,40 @@
+{
+  "context": {
+    "base": "duckdb",
+    "files_changed": 2
+  },
+  "summary": {
+    "errors": 0,
+    "warnings": 0,
+    "infos": 2
+  },
+  "skipped": [],
+  "findings": [
+    {
+      "check_id": "naming",
+      "source": "llm",
+      "severity": "info",
+      "file": "models/staging/orders_cleaned_v2.sql",
+      "line": 1,
+      "end_line": null,
+      "message": "The model name violates staging naming conventions by not using the `stg_` prefix and by including version/status suffixes.",
+      "evidence": [
+        "Model `orders_cleaned_v2` (models/staging/orders_cleaned_v2.sql) is a staging model but its name does not start with `stg_` and contains version suffix `_v2` and status suffix `_cleaned`."
+      ],
+      "suggestion": "Rename the model to something like `stg_orders`."
+    },
+    {
+      "check_id": "naming",
+      "source": "llm",
+      "severity": "info",
+      "file": "models/staging/orders_cleaned_v2.sql",
+      "line": 11,
+      "end_line": null,
+      "message": "Column alias `cust` is an abbreviation and not a full snake_case word.",
+      "evidence": [
+        "Line 11: `user_id as cust,`"
+      ],
+      "suggestion": "Rename the alias to `customer_id`."
+    }
+  ]
+}
