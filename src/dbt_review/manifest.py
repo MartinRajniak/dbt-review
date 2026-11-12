@@ -39,11 +39,18 @@ class _ManifestFile(BaseModel):
 class Manifest:
     def __init__(self, file: _ManifestFile) -> None:
         nodes = list(file.nodes.values())
-        self._models = {_git_path(node): node for node in nodes if node.resource_type == "model"}
+        models = [node for node in nodes if node.resource_type == "model"]
+        self._by_path = {_git_path(node): node for node in models}
+        self._by_name = {node.name: node for node in models}
         self._tests = [node for node in nodes if node.resource_type == "test"]
 
     def model_at(self, path: str) -> ModelFacts | None:
-        node = self._models.get(path)
+        return self._facts(self._by_path.get(path))
+
+    def model_named(self, name: str) -> ModelFacts | None:
+        return self._facts(self._by_name.get(name))
+
+    def _facts(self, node: _Node | None) -> ModelFacts | None:
         if node is None:
             return None
         return ModelFacts(

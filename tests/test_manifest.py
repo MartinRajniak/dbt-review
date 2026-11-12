@@ -58,3 +58,14 @@ def test_model_knows_which_tests_guard_each_column(tmp_path):
 
     assert model is not None
     assert model.column_tests == {"order_id": ["unique", "not_null"], "status": ["accepted_values"]}
+
+
+def test_model_is_found_by_name_and_other_names_are_unknown(tmp_path):
+    manifest = load_manifest(
+        write_manifest(tmp_path, model_node("stg_orders", "models/staging/stg_orders.sql"))
+    )
+
+    found = manifest.model_named("stg_orders")
+
+    assert found is not None and found.name == "stg_orders"
+    assert manifest.model_named("raw_orders") is None
