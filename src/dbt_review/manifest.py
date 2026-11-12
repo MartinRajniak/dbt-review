@@ -38,14 +38,9 @@ class _ManifestFile(BaseModel):
 
 class Manifest:
     def __init__(self, file: _ManifestFile) -> None:
-        self._models = {
-            # dbt on Windows writes backslashes; git paths always use forward slashes
-            node.original_file_path.replace("\\", "/"): node
-            for node in file.nodes.values()
-            if node.resource_type == "model"
-        }
-
-        self._tests = [node for node in file.nodes.values() if node.resource_type == "test"]
+        nodes = list(file.nodes.values())
+        self._models = {_git_path(node): node for node in nodes if node.resource_type == "model"}
+        self._tests = [node for node in nodes if node.resource_type == "test"]
 
     def model_at(self, path: str) -> ModelFacts | None:
         node = self._models.get(path)
@@ -72,3 +67,8 @@ def load_manifest(path: Path) -> Manifest:
 def _name(unique_id: str) -> str:
     """`model.jaffle_shop.stg_orders` -> `stg_orders`"""
     return unique_id.rsplit(".", 1)[-1]
+
+
+def _git_path(node: _Node) -> str:
+    """dbt on Windows writes backslashes; git always uses forward slashes."""
+    return node.original_file_path.replace("\\", "/")
