@@ -100,6 +100,9 @@ To re-create every sample output from the scenario branches (it runs `dbt parse`
 uv run python examples/regenerate.py --fork ../jaffle_shop_duckdb
 ```
 
+The rule findings come out identical every time. The LLM findings should land on the same lines, in
+different words, and the naming check does not always pick the same names.
+
 ## How it works
 
 1. Parse the diff into changed dbt files and the lines each one added.
