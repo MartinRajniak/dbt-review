@@ -1,5 +1,9 @@
-from dbt_review.llm_check import ModelContext, render_prompt
+from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+from dbt_review.llm_check import ModelContext, render_prompt, review_model, reviewer
 from dbt_review.manifest import ModelFacts
+from dbt_review.models import Severity, Source
 
 ORDERS_SQL = """\
 select orders.order_id, payments.payment_method
@@ -43,3 +47,33 @@ def test_prompt_says_so_when_a_model_has_no_column_tests():
     context.inputs.append(ModelFacts("raw_refunds", [], {}))
 
     assert "- raw_refunds: no column tests\n" in render_prompt(context)
+
+
+def model_answering(*findings: dict) -> FunctionModel:
+    """A fake LLM that returns these findings whatever it is asked."""
+
+    def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"findings": list(findings)})])
+
+    return FunctionModel(answer)
+
+
+FANOUT = {
+    "check_id": "join-fanout",
+    "severity": "warning",
+    "line": 3,
+    "end_line": 4,
+    "message": "Joining stg_payments on order_id returns one row per payment.",
+    "evidence": ["stg_payments has a unique test on payment_id, none on order_id"],
+    "suggestion": "Aggregate payments to one row per order before joining.",
+}
+
+
+def test_an_answer_from_the_model_becomes_a_finding_on_the_reviewed_file():
+    with reviewer.override(model=model_answering(FANOUT)):
+        [finding] = review_model(orders_context(), model="groq:any")
+
+    assert (finding.source, finding.file) == (Source.LLM, "models/orders.sql")
+    assert (finding.check_id, finding.severity) == ("join-fanout", Severity.WARNING)
+    assert (finding.line, finding.end_line) == (3, 4)
+    assert finding.evidence == ["stg_payments has a unique test on payment_id, none on order_id"]
