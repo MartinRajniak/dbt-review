@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from dbt_review.manifest import ModelFacts
-from dbt_review.models import MAX_TEXT_LENGTH, Finding, Severity, Source
+from dbt_review.models import MAX_TEXT_LENGTH, Finding, Source
 
 
 class LlmFinding(BaseModel):
@@ -44,17 +44,7 @@ def review_model(context: ModelContext, model: str) -> list[Finding]:
     """One call to the LLM for one changed model. `model` is `provider:name`, e.g. `groq:openai/gpt-oss-120b`."""
     answer = reviewer.run_sync(render_prompt(context), model=model).output
     return [
-        Finding(
-            check_id=found.check_id,
-            source=Source.LLM,
-            severity=Severity(found.severity),
-            file=context.path,
-            line=found.line,
-            end_line=found.end_line,
-            message=found.message,
-            evidence=found.evidence,
-            suggestion=found.suggestion,
-        )
+        Finding(source=Source.LLM, file=context.path, **found.model_dump())
         for found in answer.findings
         if found.line in context.added_lines  # the model sometimes cites a line it was not asked about
     ]
