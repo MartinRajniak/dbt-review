@@ -145,3 +145,26 @@ def test_problems_the_change_did_not_introduce_are_not_reported(dbt_project, tmp
     main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")])
 
     assert "0 errors · 0 warnings" in capsys.readouterr().out
+
+
+HARDCODED_DIFF = """\
+diff --git a/models/orders.sql b/models/orders.sql
+new file mode 100644
+--- /dev/null
++++ b/models/orders.sql
+@@ -0,0 +1 @@
++select order_id from main.stg_orders
+"""
+
+
+@pytest.fixture
+def hardcoded_change(dbt_project, tmp_path):
+    (dbt_project / "models" / "orders.sql").write_text("select order_id from main.stg_orders\n")
+    (tmp_path / "change.diff").write_text(HARDCODED_DIFF)
+    return ["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")]
+
+
+def test_every_rule_runs_on_a_changed_model(hardcoded_change, capsys):
+    main(hardcoded_change)
+
+    assert "  1      error    hardcoded-relation (rule)" in capsys.readouterr().out
