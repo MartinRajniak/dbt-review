@@ -250,3 +250,17 @@ def test_a_model_that_keeps_answering_wrongly_skips_the_llm_check_and_keeps_the_
     out = capsys.readouterr().out
     assert "select-star (rule)" in out
     assert out.splitlines()[-1].startswith("skipped (the model call failed: ")
+
+
+LLM_INFO = LLM_WARNING | {"check_id": "naming", "severity": "info", "message": "`cust` is an abbreviation."}
+
+
+def test_info_findings_are_shown_only_with_show_info(parsed_project, capsys):
+    with reviewer.override(model=model_answering(LLM_INFO)):
+        main(review_of(parsed_project, STAR_DIFF))
+        hidden = capsys.readouterr().out
+        main([*review_of(parsed_project, STAR_DIFF), "--show-info"])
+        shown = capsys.readouterr().out
+
+    assert "naming (llm)" not in hidden and "1 info hidden (--show-info)" in hidden
+    assert "  1      info     naming (llm)" in shown
