@@ -2,10 +2,11 @@ import sqlglot
 from sqlglot import exp
 
 from dbt_review.models import Finding, Severity, Source
+from dbt_review.select_star import _without_jinja
 
 
 def check(path: str, sql: str) -> list[Finding]:
-    tree = sqlglot.parse_one(sql, dialect="duckdb")
+    tree = sqlglot.parse_one(_without_jinja(sql), dialect="duckdb")
     ctes = {cte.alias for cte in tree.find_all(exp.CTE)}
     return [
         Finding(
@@ -19,7 +20,7 @@ def check(path: str, sql: str) -> list[Finding]:
             suggestion=f"Use {{{{ ref('{table.name}') }}}}, or {{{{ source(...) }}}} for a raw table.",
         )
         for table in tree.find_all(exp.Table)
-        if table.name not in ctes
+        if table.name not in ctes and not table.name.startswith("__")
     ]
 
 
