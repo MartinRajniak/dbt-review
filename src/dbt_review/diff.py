@@ -15,7 +15,7 @@ DBT_SUFFIXES = {".sql", ".yml", ".yaml"}
 @dataclass
 class ChangedFile:
     path: str  # relative to the repo root, forward slashes
-    added_lines: list[int]
+    added_lines: dict[int, str]  # line number in the new file -> text
 
 
 def git_diff(repo: Path, base: str) -> str:
@@ -33,9 +33,9 @@ def parse_diff(diff_text: str) -> list[ChangedFile]:
     ]
 
 
-def _added_lines(patched_file: PatchedFile) -> list[int]:
-    numbers = [line.target_line_no for hunk in patched_file for line in hunk if line.is_added]
-    return [number for number in numbers if number is not None]
+def _added_lines(patched_file: PatchedFile) -> dict[int, str]:
+    added = [line for hunk in patched_file for line in hunk if line.is_added]
+    return {line.target_line_no: line.value.rstrip("\r\n") for line in added if line.target_line_no}
 
 
 def _is_dbt_file(path: str) -> bool:

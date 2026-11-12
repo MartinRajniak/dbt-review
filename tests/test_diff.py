@@ -10,7 +10,7 @@ def example_diff(scenario: str) -> str:
 
 
 def test_added_lines_are_numbered_as_in_the_new_file():
-    changed = {file.path: file.added_lines for file in parse_diff(example_diff("fanout-join"))}
+    changed = {file.path: list(file.added_lines) for file in parse_diff(example_diff("fanout-join"))}
     assert changed == {
         "models/orders.sql": [46, 47, 55, 56, 57],
         "models/schema.yml": [61, 62, 63],

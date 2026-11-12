@@ -174,3 +174,12 @@ def test_an_error_finding_fails_the_run(hardcoded_change):
 
 def test_warnings_alone_do_not_fail_the_run(dbt_project):
     assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.OK
+
+
+def test_checkout_from_before_the_change_is_refused(dbt_project, capsys):
+    (dbt_project / "models" / "customers.sql").write_text(
+        "select customer_id\n\nfrom {{ ref('stg_customers') }}\n"
+    )
+
+    assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.TOOL_FAILED
+    assert "models/customers.sql:1 does not match the diff" in capsys.readouterr().err
