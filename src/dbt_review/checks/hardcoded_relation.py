@@ -3,13 +3,15 @@ from sqlglot import exp
 from dbt_review.models import Finding, Severity, Source
 from dbt_review.sql import is_placeholder, parse_model
 
+check_id = "hardcoded-relation"
+
 
 def check(path: str, sql: str) -> list[Finding]:
     tree = parse_model(sql)
     ctes = {cte.alias for cte in tree.find_all(exp.CTE)}
     return [
         Finding(
-            check_id="hardcoded-relation",
+            check_id=check_id,
             source=Source.RULE,
             severity=Severity.ERROR,
             file=path,

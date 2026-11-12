@@ -3,6 +3,8 @@ from sqlglot import exp
 from dbt_review.models import Finding, Severity, Source
 from dbt_review.sql import parse_model
 
+check_id = "select-star"
+
 
 def check(path: str, sql: str) -> list[Finding]:
     tree = parse_model(sql)
@@ -11,7 +13,7 @@ def check(path: str, sql: str) -> list[Finding]:
     ctes = {cte.alias: cte.this for cte in tree.find_all(exp.CTE)}
     return [
         Finding(
-            check_id="select-star",
+            check_id=check_id,
             source=Source.RULE,
             severity=Severity.WARNING,
             file=path,

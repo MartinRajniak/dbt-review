@@ -180,3 +180,10 @@ def test_warnings_alone_do_not_fail_the_run(dbt_project, tmp_path):
     (tmp_path / "change.diff").write_text(STAR_DIFF)
 
     assert main(["--repo", str(dbt_project), "--diff", str(tmp_path / "change.diff")]) == ExitCode.OK
+
+
+def test_without_a_dbt_project_every_rule_is_reported_as_skipped(tmp_path, capsys):
+    main(["--repo", str(tmp_path), "--diff", FANOUT_DIFF])
+
+    last_line = capsys.readouterr().out.splitlines()[-1]
+    assert last_line == "skipped (no dbt project): select-star, hardcoded-relation"

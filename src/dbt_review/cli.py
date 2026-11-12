@@ -37,7 +37,8 @@ def main(argv: list[str] | None = None) -> ExitCode:
     repo = Path(args.repo)
     has_repo = (repo / "dbt_project.yml").is_file()
     context = ReviewContext(repo=has_repo, base=args.base, files_changed=len(changed))
-    review = Review(context=context, findings=run_checks(repo, changed) if has_repo else [])
+    findings, skipped = run_checks(repo if has_repo else None, changed)
+    review = Review(context=context, findings=findings, skipped=skipped)
     render = render_json if args.format == "json" else render_text
     print(render(review))
     return ExitCode.FOUND_ERRORS if review.count(Severity.ERROR) else ExitCode.OK
