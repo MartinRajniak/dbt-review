@@ -183,3 +183,8 @@ def test_checkout_from_before_the_change_is_refused(dbt_project, capsys):
 
     assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.TOOL_FAILED
     assert "models/customers.sql:1 does not match the diff" in capsys.readouterr().err
+
+
+def test_changed_file_missing_from_the_checkout_is_refused(dbt_project, capsys):
+    assert main(review_of(dbt_project, HARDCODED_DIFF)) == ExitCode.TOOL_FAILED
+    assert "models/orders.sql is in the diff but not in the checkout" in capsys.readouterr().err

@@ -17,15 +17,15 @@ def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
 
 def _require_matching_checkout(project: Path, changed: list[ChangedFile]) -> None:
     """Every added line must be in the checkout, or findings would be missed or misplaced."""
+    hint = "check out the branch the diff was made from"
     for file in changed:
         path = project / file.path
-        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else None
+        if not path.is_file():
+            raise ToolError(f"{file.path} is in the diff but not in the checkout; {hint}")
+        lines = path.read_text(encoding="utf-8").splitlines()
         for number, text in file.added_lines.items():
-            if lines is not None and (number > len(lines) or lines[number - 1] != text):
-                raise ToolError(
-                    f"{file.path}:{number} does not match the diff; "
-                    "check out the branch the diff was made from"
-                )
+            if number > len(lines) or lines[number - 1] != text:
+                raise ToolError(f"{file.path}:{number} does not match the diff; {hint}")
 
 
 def _rule_findings(project: Path, changed: list[ChangedFile]) -> list[Finding]:
@@ -33,7 +33,7 @@ def _rule_findings(project: Path, changed: list[ChangedFile]) -> list[Finding]:
     findings = []
     for file in changed:
         model = project / file.path
-        if model.suffix == ".sql" and model.is_file():
+        if model.suffix == ".sql":
             sql = model.read_text(encoding="utf-8")
             found = [finding for rule in RULES for finding in rule.check(file.path, sql)]
             findings += [finding for finding in found if finding.line in file.added_lines]
