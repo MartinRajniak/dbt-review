@@ -7,10 +7,10 @@ import sys
 from enum import IntEnum
 from pathlib import Path
 
-from dbt_review.diff import git_diff, parse_diff
-from dbt_review.models import Review, ReviewContext, Severity
+from dbt_review.diff import git_diff
+from dbt_review.models import Severity
 from dbt_review.report import render_json, render_text
-from dbt_review.review import run_checks
+from dbt_review.review import review_diff
 
 
 class ExitCode(IntEnum):
@@ -33,12 +33,7 @@ def main(argv: list[str] | None = None) -> ExitCode:
     except ToolError as error:
         print(f"dbt-review: {error}", file=sys.stderr)
         return ExitCode.TOOL_FAILED
-    changed = parse_diff(diff_text)
-    repo = Path(args.repo)
-    has_repo = (repo / "dbt_project.yml").is_file()
-    context = ReviewContext(repo=has_repo, base=args.base, files_changed=len(changed))
-    findings, skipped = run_checks(repo if has_repo else None, changed)
-    review = Review(context=context, findings=findings, skipped=skipped)
+    review = review_diff(diff_text, Path(args.repo), args.base)
     render = render_json if args.format == "json" else render_text
     print(render(review))
     return ExitCode.FOUND_ERRORS if review.count(Severity.ERROR) else ExitCode.OK

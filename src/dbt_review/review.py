@@ -1,14 +1,25 @@
 from pathlib import Path
 
 from dbt_review.checks import RULES
-from dbt_review.diff import ChangedFile
-from dbt_review.models import Finding, Skipped
+from dbt_review.diff import ChangedFile, parse_diff
+from dbt_review.models import Finding, Review, ReviewContext, Skipped
 
 
-def run_checks(project: Path | None, changed: list[ChangedFile]) -> tuple[list[Finding], list[Skipped]]:
+def review_diff(diff_text: str, repo: Path, base: str | None = None) -> Review:
+    changed = parse_diff(diff_text)
+    has_project = (repo / "dbt_project.yml").is_file()
+    context = ReviewContext(repo=has_project, base=base, files_changed=len(changed))
+    if not has_project:
+        return Review(context=context, skipped=_every_rule("no dbt project"))
+    return Review(context=context, findings=_rule_findings(repo, changed))
+
+
+def _every_rule(reason: str) -> list[Skipped]:
+    return [Skipped(check_id=rule.check_id, reason=reason) for rule in RULES]
+
+
+def _rule_findings(project: Path, changed: list[ChangedFile]) -> list[Finding]:
     """Findings on the lines the change added; older problems are not this author's to fix."""
-    if project is None:
-        return [], [Skipped(check_id=rule.check_id, reason="no dbt project") for rule in RULES]
     findings = []
     for file in changed:
         model = project / file.path
@@ -16,4 +27,4 @@ def run_checks(project: Path | None, changed: list[ChangedFile]) -> tuple[list[F
             sql = model.read_text(encoding="utf-8")
             found = [finding for rule in RULES for finding in rule.check(file.path, sql)]
             findings += [finding for finding in found if finding.line in file.added_lines]
-    return findings, []
+    return findings
