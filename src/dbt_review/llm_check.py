@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass
 from importlib import resources
 from typing import Literal
@@ -73,5 +74,19 @@ def _column_tests(facts: ModelFacts) -> str:
 def _numbered(context: ModelContext) -> str:
     return "".join(
         f"{'+' if number in context.added_lines else ' '}{number:>4} | {text}\n"
-        for number, text in enumerate(context.sql.splitlines(), start=1)
+        for number, text in enumerate(_without_comments(context.sql).splitlines(), start=1)
     )
+
+
+# A quoted string, or (captured) a comment: `-- ...`, `/* ... */` or Jinja's `{# ... #}`.
+STRING_OR_COMMENT = re.compile(r"""'(?:[^']|'')*'|"(?:[^"]|"")*"|(--[^\n]*|/\*.*?\*/|\{#.*?#\})""", re.DOTALL)
+
+
+def _without_comments(sql: str) -> str:
+    """The model reviews code, not prose: a comment is where an instruction to the reviewer would hide."""
+
+    def blank(match: re.Match[str]) -> str:
+        comment = match.group(1)
+        return match.group() if comment is None else "\n" * comment.count("\n")
+
+    return STRING_OR_COMMENT.sub(blank, sql)
