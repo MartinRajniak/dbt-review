@@ -151,6 +151,7 @@ def test_json_carries_context_summary_and_every_field_of_a_finding():
     assert json.loads(render_json(review)) == {
         "context": {"repo": True, "base": "duckdb", "files_changed": 2},
         "summary": {"errors": 0, "warnings": 1, "infos": 0},
+        "skipped": [],
         "findings": [
             {
                 "check_id": "join-fanout",
@@ -193,3 +194,9 @@ def test_skipped_checks_are_named_with_the_reason_on_the_last_line():
     last_line = render_text(review_with_skipped_checks()).splitlines()[-1]
 
     assert last_line == "skipped (no dbt project): select-star, hardcoded-relation"
+
+
+def test_json_lists_skipped_checks():
+    payload = json.loads(render_json(review_with_skipped_checks()))
+
+    assert payload["skipped"][0] == {"check_id": "select-star", "reason": "no dbt project"}

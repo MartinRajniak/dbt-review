@@ -29,6 +29,7 @@ def render_json(review: Review, show_info: bool = False) -> str:
             "warnings": review.count(Severity.WARNING),
             "infos": review.count(Severity.INFO),
         },
+        "skipped": [skipped.model_dump() for skipped in review.skipped],
         "findings": [f.model_dump(mode="json") for f in _shown_findings(review, show_info)],
     }
     return json.dumps(payload, indent=2)
