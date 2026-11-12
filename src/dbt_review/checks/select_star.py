@@ -6,6 +6,8 @@ from dbt_review.sql import parse_model
 
 def check(path: str, sql: str) -> list[Finding]:
     tree = parse_model(sql)
+    if not isinstance(tree, exp.Select):  # e.g. a union: not checked
+        return []
     ctes = {cte.alias: cte.this for cte in tree.find_all(exp.CTE)}
     return [
         Finding(

@@ -124,3 +124,9 @@ def test_jinja_does_not_break_parsing_or_shift_line_numbers():
     [finding] = check("models/orders.sql", WITH_JINJA)
 
     assert finding.line == 8
+
+
+def test_union_at_the_top_level_is_not_checked():
+    sql = "select * from {{ ref('a') }}\nunion all\nselect * from {{ ref('b') }}\n"
+
+    assert check("models/everything.sql", sql) == []
