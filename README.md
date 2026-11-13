@@ -108,8 +108,14 @@ the naming check does not always pick the same names.
 
 ## Use it in CI
 
-A sketch for GitHub Actions in the dbt repository; it has not been run in this form yet. The job fails on exit
-code 1 (an error found) and 2 (the tool could not review).
+It runs on the demo project: each scenario branch is an open
+[pull request on the fork](https://github.com/MartinRajniak/jaffle_shop_duckdb/pulls), reviewed by
+[this workflow](https://github.com/MartinRajniak/jaffle_shop_duckdb/blob/duckdb/.github/workflows/dbt-review.yml).
+`hardcoded-schema` fails its check, the others pass, and each review is on its run's summary page. The job fails
+on exit code 1 (an error found) and 2 (the tool could not review).
+
+The minimal form for a dbt repository on GitHub Actions (the demo's workflow also writes the review to the summary
+page, and reads this repository with a token while it is private):
 
 ```yaml
 on: pull_request                     # never pull_request_target: the change under review is untrusted
