@@ -50,3 +50,17 @@ def test_ref_source_and_cte_names_are_fine():
 
 def test_table_function_is_not_a_relation():
     assert check("models/numbers.sql", "select n from generate_series(1, 3) as numbers(n)\n") == []
+
+
+SAME_NAME_AS_A_CTE = """\
+with payments as (
+    select id, amount from raw.payments
+)
+select id from payments
+"""
+
+
+def test_schema_qualified_table_is_never_a_cte():
+    [finding] = check("models/payments.sql", SAME_NAME_AS_A_CTE)
+
+    assert (finding.line, "raw.payments" in finding.message) == (2, True)

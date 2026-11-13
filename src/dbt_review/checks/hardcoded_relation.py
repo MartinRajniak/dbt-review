@@ -27,7 +27,9 @@ def check(path: str, sql: str) -> list[Finding]:
 
 def _named_directly(table: exp.Table, ctes: set[str]) -> bool:
     """Not a CTE, not ref() or source(), and not a table function such as generate_series()."""
-    return bool(table.name) and table.name not in ctes and not is_placeholder(table.name)
+    # `raw.payments` is a table even when a CTE is called `payments`.
+    is_cte = table.name in ctes and not table.db
+    return bool(table.name) and not is_cte and not is_placeholder(table.name)
 
 
 def _name(table: exp.Table) -> str:
