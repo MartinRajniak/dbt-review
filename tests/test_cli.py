@@ -178,22 +178,27 @@ def test_warnings_alone_do_not_fail_the_run(dbt_project):
     assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.OK
 
 
-UNPARSEABLE_DIFF = """\
+NEW_EVENTS_MODEL_DIFF = """\
 diff --git a/models/events.sql b/models/events.sql
 new file mode 100644
 --- /dev/null
 +++ b/models/events.sql
 @@ -0,0 +1 @@
-+select payload:id::int as event_id from {{ ref('stg_events') }}
++{sql}
 """
 
 
-def test_a_model_the_rules_cannot_parse_is_reported_as_skipped(dbt_project, capsys):
-    (dbt_project / "models" / "events.sql").write_text(
-        "select payload:id::int as event_id from {{ ref('stg_events') }}\n"
-    )
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "select payload:id::int as event_id from {{ ref('stg_events') }}",  # Snowflake: does not parse
+        "select 'open as event_id",  # unterminated string: does not tokenize
+    ],
+)
+def test_a_model_the_rules_cannot_read_is_reported_as_skipped(dbt_project, capsys, sql):
+    (dbt_project / "models" / "events.sql").write_text(sql + "\n")
 
-    assert main(review_of(dbt_project, UNPARSEABLE_DIFF)) == ExitCode.OK
+    assert main(review_of(dbt_project, NEW_EVENTS_MODEL_DIFF.replace("{sql}", sql))) == ExitCode.OK
     out = capsys.readouterr().out
     assert "skipped (could not parse models/events.sql): select-star, hardcoded-relation" in out
 
@@ -298,16 +303,3 @@ diff --git a/models/customers.sql b/models/customers.sql
 def test_an_unexpected_failure_is_a_tool_failure_not_a_review_result(dbt_project, capsys):
     assert main(review_of(dbt_project, TRUNCATED_DIFF)) == ExitCode.TOOL_FAILED
     assert capsys.readouterr().err.startswith("dbt-review: unexpected failure (UnidiffParseError): ")
-
-
-def test_a_model_the_rules_cannot_tokenize_is_reported_as_skipped(dbt_project, capsys):
-    (dbt_project / "models" / "events.sql").write_text("select 'open as event_id\n")
-    diff = UNPARSEABLE_DIFF.replace(
-        "select payload:id::int as event_id from {{ ref('stg_events') }}", "select 'open as event_id"
-    )
-
-    assert main(review_of(dbt_project, diff)) == ExitCode.OK
-    assert (
-        "skipped (could not parse models/events.sql): select-star, hardcoded-relation"
-        in capsys.readouterr().out
-    )
