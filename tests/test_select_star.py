@@ -141,6 +141,14 @@ def test_config_block_does_not_break_parsing_or_shift_line_numbers():
     assert finding.line == 5
 
 
+def test_config_block_with_whitespace_control_is_blanked_too():
+    sql = "{{- config(materialized='table') -}}\n\nselect * from {{ ref('stg_orders') }}\n"
+
+    [finding] = check("models/orders.sql", sql)
+
+    assert finding.line == 3
+
+
 def test_select_without_a_from_has_no_star_to_check():
     assert check("models/constants.sql", "select 1 as id\n") == []
 
