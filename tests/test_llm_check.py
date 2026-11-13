@@ -100,6 +100,21 @@ def test_comments_are_hidden_from_the_model_and_line_numbers_stay():
     assert "    5 | from {{ ref('stg_orders') }}\n" in prompt
 
 
+def test_the_model_receives_the_instructions_and_the_prompt():
+    requests = []
+
+    def record(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        requests.append(messages[0])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"findings": []})])
+
+    with reviewer.override(model=FunctionModel(record)):
+        review_model(orders_context(), model="groq:any")
+
+    [request] = requests
+    assert request.instructions.startswith("You review one changed dbt model")
+    assert request.parts[-1].content == render_prompt(orders_context())
+
+
 def test_a_failed_model_call_is_tried_once_more():
     calls = []
 
