@@ -284,3 +284,17 @@ def test_info_findings_are_shown_only_with_show_info(parsed_project, capsys):
 
     assert "naming (llm)" not in hidden and "1 info hidden (--show-info)" in hidden
     assert "  1      info     naming (llm)" in shown
+
+
+TRUNCATED_DIFF = """\
+diff --git a/models/customers.sql b/models/customers.sql
+--- a/models/customers.sql
++++ b/models/customers.sql
+@@ -1,3 +1,3 @@
+-select customer_id
+"""
+
+
+def test_an_unexpected_failure_is_a_tool_failure_not_a_review_result(dbt_project, capsys):
+    assert main(review_of(dbt_project, TRUNCATED_DIFF)) == ExitCode.TOOL_FAILED
+    assert capsys.readouterr().err.startswith("dbt-review: unexpected failure (UnidiffParseError): ")

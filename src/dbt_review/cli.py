@@ -30,6 +30,9 @@ def main(argv: list[str] | None = None) -> ExitCode:
     except ToolError as error:
         print(f"dbt-review: {error}", file=sys.stderr)
         return ExitCode.TOOL_FAILED
+    except Exception as error:  # noqa: BLE001 - exit code 1 must only ever mean the review found an error
+        print(f"dbt-review: unexpected failure ({type(error).__name__}): {error}", file=sys.stderr)
+        return ExitCode.TOOL_FAILED
     render = render_json if args.format == "json" else render_text
     print(render(review, show_info=args.show_info))
     return ExitCode.FOUND_ERRORS if review.count(Severity.ERROR) else ExitCode.OK
