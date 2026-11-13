@@ -298,10 +298,15 @@ def test_model_option_chooses_the_provider(parsed_project, monkeypatch, capsys):
     assert capsys.readouterr().out.splitlines()[-1] == "skipped (ANTHROPIC_API_KEY is not set): llm-review"
 
 
-def test_a_model_that_keeps_answering_wrongly_skips_the_llm_check_and_keeps_the_rules(parsed_project, capsys):
-    without_evidence = LLM_WARNING | {"evidence": []}
-
-    with reviewer.override(model=model_answering(without_evidence)):
+@pytest.mark.parametrize(
+    "wrong_answer",
+    [LLM_WARNING | {"evidence": []}, LLM_WARNING | {"message": "x" * 301}],
+    ids=["no evidence", "message over 300 characters"],
+)
+def test_a_model_that_keeps_answering_wrongly_skips_the_llm_check_and_keeps_the_rules(
+    parsed_project, capsys, wrong_answer
+):
+    with reviewer.override(model=model_answering(wrong_answer)):
         assert main(review_of(parsed_project, STAR_DIFF)) == ExitCode.OK
 
     out = capsys.readouterr().out
