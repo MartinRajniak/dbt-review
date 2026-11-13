@@ -55,7 +55,9 @@ the tool produced for it, as text and as JSON.
 | [`new-model-no-tests`](examples/new-model-no-tests/output.txt) | a new model without tests | nothing: this check is not built |
 | [`payment-method-drift`](examples/payment-method-drift/output.txt) | a value added in one place of two | nothing: this check is not built |
 
-Five of the seven flawed changes pass `dbt build` with every test green. That is the gap this tool is for.
+Five of the seven flawed changes pass `dbt build` with every test green. That is the gap this tool is for. The
+fanout is one of the two that fail it: the `unique` test on `orders` catches it only when the data has a
+duplicate and the build runs; the review flags it on the diff, before either.
 
 ## Run it
 
@@ -139,7 +141,7 @@ Smaller choices:
   free to try and holds the answer structure well. Anthropic and OpenAI models are accepted through the same
   option and have not been run.
 - **Little text on purpose.** The more a review says, the less of it is read: `info` findings are hidden by
-  default and every message is capped at 300 characters.
+  default, and each message and fix is capped at 300 characters (evidence lines are not).
 
 ## Adding a check
 
@@ -151,6 +153,13 @@ Smaller choices:
 ## Limitations
 
 - **Small evidence.** The results come from tens of calls on one demo project. See ADR 3.
+- **DuckDB SQL only.** A model the parser cannot read, such as Snowflake's `value:id::int`, is reported as skipped
+  by the rules.
+- **Tests on sources and seeds are not given to the LLM**, so a join to a source with a `unique` test can still be
+  flagged.
+- **Every changed `.sql` file is checked by the rules**, including singular tests and analyses.
+- **The dbt project must be at the root of the git repository.**
+- **A finding cannot be suppressed** in the code yet.
 - **Naming is caught in part**: two of four bad names in the sample. Closing that needs prompt work or a stronger
   model, measured against the scenarios.
 - **SQL produced by macros is invisible** to the rules, because Jinja is not compiled.
@@ -185,8 +194,7 @@ Roughly in the order I would do them:
 
 ## How it was built
 
-Test-first, in small commits: each behaviour started as a failing test, and the history can be read commit by
-commit. CI runs ruff, mypy in strict mode and the tests on every push.
+Built test-first in small commits; the history can be read commit by commit. CI runs ruff, mypy in strict mode and the tests on every push.
 
 It was built with Claude Code as a pair. The design, the scope and the constraints were set by the author, who
 reviewed every commit and questioned the decisions recorded in the ADRs.
