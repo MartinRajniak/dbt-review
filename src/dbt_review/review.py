@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from pydantic_ai.exceptions import AgentRunError
-from sqlglot.errors import ParseError
+from sqlglot.errors import SqlglotError
 
 from dbt_review.checks import RULES
 from dbt_review.diff import ChangedFile, parse_diff
@@ -49,7 +49,7 @@ def _rule_findings(project: Path, changed: list[ChangedFile]) -> tuple[list[Find
             for rule in RULES:
                 try:
                     found = rule.check(file.path, sql)
-                except ParseError:
+                except SqlglotError:  # a parse error, or a string or comment left open
                     skipped.append(Skipped(check_id=rule.check_id, reason=f"could not parse {file.path}"))
                     continue
                 findings += [finding for finding in found if finding.line in file.added_lines]
