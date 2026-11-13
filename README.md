@@ -95,6 +95,7 @@ cd dbt-review
 uv sync
 uv run pytest            # no network, no API key
 uv run ruff check && uv run mypy
+DBT_REVIEW_FORK=../jaffle_shop_duckdb uv run pytest tests/test_examples.py   # end to end, as CI runs it
 ```
 
 To re-create every sample output from the scenario branches (it runs `dbt parse` through `uvx`):
@@ -106,6 +107,31 @@ uv run python examples/regenerate.py --fork ../jaffle_shop_duckdb
 The rule findings come out identical every time. The LLM findings should land on the same lines, in
 different words, and the naming check does not always pick the same names.
 
+## Use it in CI
+
+A sketch for GitHub Actions in the dbt repository; it has not been run in this form yet. The job fails on exit
+code 1 (an error found) and 2 (the tool could not review).
+
+```yaml
+on: pull_request                     # never pull_request_target: the change under review is untrusted
+permissions:
+  contents: read
+jobs:
+  dbt-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0             # --base needs the history
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uvx --from dbt-duckdb dbt parse
+      - run: uvx --from git+https://github.com/MartinRajniak/dbt-review dbt-review --base origin/${{ github.base_ref }}
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+```
+
+A pull request from a fork gets no secrets, so its review runs the rules and reports the LLM check as skipped.
+
 ## How it works
 
 1. Parse the diff into changed dbt files and the lines each one added.
@@ -116,6 +142,18 @@ different words, and the naming check does not always pick the same names.
 5. Keep only findings on lines the change added. Print them grouped by file.
 
 The instructions the LLM receives are one file: [`src/dbt_review/instructions.md`](src/dbt_review/instructions.md).
+
+**How many LLM calls a change costs.** One per changed model. In the demo project's history most commits change no
+model at all:
+
+| Models changed in a commit | Commits (of 96) |
+|---|---|
+| 0 | 77 |
+| 1 | 16 |
+| 2 | 2 |
+| 5 | 1 |
+
+A demo project is not a team's repository, and a pull request is the sum of its commits, so this is a lower bound.
 
 ## Design decisions
 
@@ -155,20 +193,18 @@ Smaller choices:
 ## Limitations
 
 - **Small evidence.** The results come from tens of calls on one demo project. See ADR 3.
-- **DuckDB SQL only.** A model the parser cannot read, such as Snowflake's `value:id::int`, is reported as skipped
-  by the rules.
-- **Tests on sources and seeds are not given to the LLM**, so a join to a source with a `unique` test can still be
-  flagged.
-- **Every changed `.sql` file is checked by the rules**, including singular tests and analyses.
-- **The dbt project must be at the root of the git repository.**
-- **A finding cannot be suppressed** in the code yet.
-- **Naming is caught in part**: two of four bad names in the sample. Closing that needs prompt work or a stronger
-  model, measured against the scenarios.
-- **SQL produced by macros is invisible** to the rules, because Jinja is not compiled.
-- **A model with a `union` at the top level** is not checked by `select-star`.
-- **The LLM check needs a current manifest.** A changed model the manifest does not know is not sent to the LLM,
-  and a stale manifest is not detected.
-- **A changed `.yml` file is not reviewed** by either kind of check.
+- **The LLM sees one changed model at a time**: its file, its tests and the tests of the models it reads, not the
+  other files in the change. That keeps each call small and focused, and it misses a problem spread across files.
+  The `payment-method-drift` scenario is one: a payment method added to the accepted values in `schema.yml` but
+  not to the list in `orders.sql` finds nothing.
+- **DuckDB SQL only, and Jinja is not compiled.** A model the parser cannot read, such as Snowflake's
+  `value:id::int`, is reported as skipped by the rules; SQL produced by macros is invisible to them.
+- **The LLM knows only column tests on models.** Model-level tests, constraints and tests on sources and seeds
+  are not in its prompt, so a join that is safe for one of those reasons can still be flagged.
+- **The manifest must be current**, and a stale one is not detected. A changed `.yml` file is not reviewed.
+- **The rules check every changed `.sql` file**, including singular tests; a top-level `union` is not checked by
+  `select-star`; the dbt project must be at the root of the git repository; a finding cannot be suppressed.
+- **Naming is caught in part**: two of four bad names in the sample.
 - **A failed LLM call** is tried once more; after that the whole LLM check is reported as skipped for the run.
 - **An instruction could still hide** in a string literal or a column alias. Hiding comments narrows that route;
   it does not close it.
@@ -181,22 +217,26 @@ Roughly in the order I would do them:
    is measured before it is merged, and the same run nightly to notice the provider changing the model (ADR 3).
 2. **Record the model, the prompt version and token counts** in the JSON report, and save it as an artifact of
    each pull request's CI run (ADR 4).
-3. **A CI workflow** for the reviewed repository: `dbt parse`, then
-   `uvx --from git+https://github.com/MartinRajniak/dbt-review dbt-review --base origin/main`. A pinned Docker
-   image after that, so there is no install step on every run.
-4. **One definition per LLM check** (id, default severity, guidance), with the prompt and the answer schema
+3. **`--fail-on warning`**, so a team can decide that warnings fail the build too. Today only an error does.
+4. **A stronger prompt**: a fixed temperature, one or two examples per check, and the grain facts it lacks
+   (model-level tests such as `unique_combination_of_columns`, constraints, tests on sources and seeds), each
+   change measured against the scenarios.
+5. **More checks**: a new model without `unique` and `not_null` tests on its key; a value list or column name
+   that now disagrees with another file (the two scenarios above that find nothing today). Rules then need the
+   manifest as well as the SQL.
+6. **Verify the evidence**: check that every column and test the LLM cites exists in the manifest.
+7. **Other SQL dialects, Snowflake first.** The manifest names the warehouse (`metadata.adapter_type`); the rules
+   would parse with that dialect. Not built because there is no Snowflake project here to test it on.
+8. **One definition per LLM check** (id, default severity, guidance), with the prompt and the answer schema
    assembled from the enabled ones, and severity set by code.
-5. **A configuration file in the reviewed repository** for what does not change per run: the model, which checks
-   are on, severity per check, naming conventions. Flags stay for what does change: the base and the format.
-6. **More checks**: a new model without `unique` and `not_null` tests on its key; a value list or column name
-   that now disagrees with another file (the two scenarios above that find nothing today).
-7. **Verify the evidence**: check that every column and test the LLM cites exists in the manifest.
-8. **Mutation testing** of the unit tests, to find the ones that would not notice a bug.
 9. **An agent as an advisory layer** on top, to find what nobody wrote a check for (ADR 1).
 
 ## How it was built
 
-Built test-first in small commits; the history can be read commit by commit. CI runs ruff, mypy in strict mode and the tests on every push.
+Built test-first in small commits; the history can be read commit by commit. CI runs ruff, mypy in strict mode,
+the unit tests and an end-to-end test that reviews every scenario branch of the demo project. One mutation-testing
+run (mutmut) found behaviour no test pinned down: for example, a change that kept only the last model's LLM
+findings failed no test. Those tests were added.
 
 It was built with Claude Code as a pair. The design, the scope and the constraints were set by the author, who
 reviewed every commit and questioned the decisions recorded in the ADRs.
