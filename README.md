@@ -29,6 +29,20 @@ models/orders.sql
 
 This is [`examples/fanout-join/output.txt`](examples/fanout-join/output.txt); one long line is wrapped here.
 
+## Contents
+
+- [What it checks](#what-it-checks)
+- [See it without installing anything](#see-it-without-installing-anything)
+- [Run it](#run-it)
+- [Use it in CI](#use-it-in-ci)
+- [How it works](#how-it-works)
+- [Design decisions](#design-decisions)
+- [Adding a check](#adding-a-check)
+- [Limitations](#limitations)
+- [Next steps](#next-steps)
+- [How it was built](#how-it-was-built)
+- [Licence](#licence)
+
 ## What it checks
 
 | Check | Kind | Severity | Catches |
