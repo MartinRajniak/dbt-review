@@ -45,30 +45,10 @@ from "the reviewer could not do its job".
 
 - A wrongly configured CI job fails loudly instead of passing forever.
 - `--base` is the recommended form for CI: the diff is made from the checkout, so the two cannot disagree.
-- The sample diffs in `examples/` can only be re-run against the fork with the matching scenario branch checked
-  out. Each sample's committed output shows the result without any setup.
 - Partial context is handled differently: when only something optional is missing (the manifest, an API key), the
   checks that need it are skipped and the report names them and says why.
-- A reduced review from the diff alone stays possible later, for the few checks that are safe without the file,
-  such as a schema-qualified table name on an added line.
 
 ## Considered and not built
 
-**Reading the files from git instead of from disk** (`--base A --head B`, each file via `git show B:path`). The
-state of the checkout would then not matter. It was rejected because it solves no case we have:
-
-- In CI the checkout is the head commit, so `--base` already compares two commits.
-- Locally, people review work in progress, which is not in any commit yet. `git diff <base> | dbt-review --diff -`
-  covers that: the diff and the files both come from the working tree.
-- The LLM check needs dbt's manifest, which is built from a checkout. Reviewing a commit that is not checked out
-  would need a checkout anyway; `git worktree` gives one without a second way of reading files.
-
-**Special handling of uncommitted changes** (a warning, or a flag to include them). One check already covers
-the harmful case: a local edit that changes or moves an added line fails the comparison with the diff. Other
-local edits are read as they are on disk. To review work in progress on purpose, give the tool that diff:
-`git diff <base> | dbt-review --diff -` (run `git add -N <file>` first for a file git does not track yet).
-
-**Checking a `.diff` file against the checkout by fingerprint.** A git diff records a hash of each file after the
-change (the `index` line). Comparing it with the file on disk would be an exact whole-file check, where today only
-the added lines are compared. It is a possible next step; it needs git to compute the hash the same way on every
-platform.
+Reading the files from git instead of from disk (`--base A --head B`): it solves no case we have, because CI checks
+out the head commit anyway and the LLM check needs a manifest built from a checkout.

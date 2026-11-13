@@ -34,13 +34,8 @@ Level 2 is the gate for prompt and model changes. Each scenario states what must
  "must_not_find": ["naming"]}
 ```
 
-The eval reports, per scenario and in total:
-
-- **hits and misses** against `must_find`;
-- **noise**: findings nobody expected, including any finding on the clean scenario;
-- **dropped findings**: answers the tool rejected, for example a line the change did not add;
-- **agreement between runs**: the same scenario run several times should give the same findings;
-- **tokens and seconds**, which become cost per review.
+The eval reports, per scenario and in total: hits and misses, noise (any finding on the clean scenario counts),
+findings the tool dropped, agreement between runs, and tokens and seconds, which become cost per review.
 
 A change is kept when hits do not go down and noise does not go up. The scenarios are the specification: a problem
 found in production becomes a new scenario first, then a prompt or rule change.
