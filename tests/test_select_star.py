@@ -176,3 +176,15 @@ select order_id from orders
 def test_closing_select_of_one_named_column_is_fine():
     assert check("models/order_ids.sql", ONE_NAMED_COLUMN_FROM_A_STAR_CTE) == []
 
+
+STAR_OF_A_JOINED_TABLE = """\
+select orders.order_id, payments.*
+from {{ ref('stg_orders') }} as orders
+left join {{ ref('stg_payments') }} as payments on orders.order_id = payments.order_id
+"""
+
+
+def test_star_of_a_joined_table_is_flagged():
+    [finding] = check("models/orders.sql", STAR_OF_A_JOINED_TABLE)
+
+    assert finding.line == 1
