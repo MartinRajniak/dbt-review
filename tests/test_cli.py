@@ -243,6 +243,33 @@ def test_llm_findings_on_changed_models_are_reported(parsed_project, capsys):
     assert "  1      warning  join-fanout (llm)" in capsys.readouterr().out
 
 
+TWO_MODELS_DIFF = (
+    STAR_DIFF
+    + """\
+diff --git a/models/orders.sql b/models/orders.sql
+new file mode 100644
+--- /dev/null
++++ b/models/orders.sql
+@@ -0,0 +1 @@
++select order_id from {{ ref('stg_orders') }}
+"""
+)
+
+
+def test_llm_findings_from_every_changed_model_are_kept(parsed_project, capsys):
+    (parsed_project / "models" / "orders.sql").write_text("select order_id from {{ ref('stg_orders') }}\n")
+    write_manifest(
+        parsed_project / "target",
+        model_node("customers", "models/customers.sql"),
+        model_node("orders", "models/orders.sql"),
+    )
+
+    with reviewer.override(model=model_answering(LLM_WARNING)):
+        main(review_of(parsed_project, TWO_MODELS_DIFF))
+
+    assert capsys.readouterr().out.count("join-fanout (llm)") == 2
+
+
 def test_without_a_manifest_the_llm_check_is_reported_as_skipped(dbt_project, capsys):
     main(review_of(dbt_project, STAR_DIFF))
 
