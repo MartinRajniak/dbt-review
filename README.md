@@ -8,8 +8,8 @@ It uses two kinds of checks:
 - **Rules** for mistakes that can be recognised with certainty, such as a hardcoded table name. Same input, same
   answer, no LLM. Only a rule can fail the build.
 - **One LLM call per changed model** for judgement a rule cannot make, such as "does this join multiply rows?".
-  The LLM is given the facts it needs (which columns have `unique` tests) and must cite them. Its findings are
-  warnings at most.
+  The LLM is given the facts it needs (which columns have `unique` tests) and must give evidence for every
+  finding; the evidence is not yet checked. Its findings are warnings at most.
 
 ```
 dbt-review · base duckdb · 2 files changed
@@ -55,7 +55,8 @@ the tool produced for it, as text and as JSON.
 | [`new-model-no-tests`](examples/new-model-no-tests/output.txt) | a new model without tests | nothing: this check is not built |
 | [`payment-method-drift`](examples/payment-method-drift/output.txt) | a value added in one place of two | nothing: this check is not built |
 
-Five of the seven flawed changes pass `dbt build` with every test green. That is the gap this tool is for. The
+Five of the seven flawed changes pass `dbt build` with every test green, run on a database already built from
+the base branch. That is the gap this tool is for. The
 fanout is one of the two that fail it: the `unique` test on `orders` catches it only when the data has a
 duplicate and the build runs; the review flags it on the diff, before either.
 
@@ -141,7 +142,8 @@ Smaller choices:
   free to try and holds the answer structure well. Anthropic and OpenAI models are accepted through the same
   option and have not been run.
 - **Little text on purpose.** The more a review says, the less of it is read: `info` findings are hidden by
-  default, and each message and fix is capped at 300 characters (evidence lines are not).
+  default, and a message or fix over 300 characters is rejected. The model is asked again; if the answer stays
+  too long, the LLM check is skipped.
 
 ## Adding a check
 
