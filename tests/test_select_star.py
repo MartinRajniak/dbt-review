@@ -163,3 +163,16 @@ def test_union_at_the_top_level_is_not_checked():
     sql = "select * from {{ ref('a') }}\nunion all\nselect * from {{ ref('b') }}\n"
 
     assert check("models/everything.sql", sql) == []
+
+
+ONE_NAMED_COLUMN_FROM_A_STAR_CTE = """\
+with orders as (
+    select * from {{ ref('stg_orders') }}
+)
+select order_id from orders
+"""
+
+
+def test_closing_select_of_one_named_column_is_fine():
+    assert check("models/order_ids.sql", ONE_NAMED_COLUMN_FROM_A_STAR_CTE) == []
+
