@@ -141,6 +141,10 @@ def test_config_block_does_not_break_parsing_or_shift_line_numbers():
     assert finding.line == 5
 
 
+def test_select_without_a_from_has_no_star_to_check():
+    assert check("models/constants.sql", "select 1 as id\n") == []
+
+
 def test_union_at_the_top_level_is_not_checked():
     sql = "select * from {{ ref('a') }}\nunion all\nselect * from {{ ref('b') }}\n"
 

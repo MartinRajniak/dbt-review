@@ -64,5 +64,7 @@ def _sources(star: exp.Star, select: exp.Select) -> list[str]:
 
 
 def _tables(select: exp.Select) -> list[exp.Table]:
+    if not (from_ := select.args.get("from_")):  # `select 1 as id` reads nothing
+        return []
     joined = [join.this for join in select.args.get("joins") or []]
-    return [t for t in [select.args["from_"].this, *joined] if isinstance(t, exp.Table)]
+    return [t for t in [from_.this, *joined] if isinstance(t, exp.Table)]
