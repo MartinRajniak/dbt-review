@@ -35,8 +35,8 @@ def main() -> None:
             [*shlex.split(args.dbt), "parse", "--quiet"], cwd=args.fork, check=True, capture_output=True
         )
         review = review_diff(git_diff(args.fork, BASE), args.fork, BASE, args.model)
-        (folder / "output.txt").write_text(render_text(review, show_info=True) + "\n", encoding="utf-8")
-        (folder / "output.json").write_text(render_json(review, show_info=True) + "\n", encoding="utf-8")
+        (folder / "output.txt").write_text(render_text(review) + "\n", encoding="utf-8")
+        (folder / "output.json").write_text(render_json(review) + "\n", encoding="utf-8")
         print(f"{folder.name}: {len(review.findings)} findings, {len(review.skipped)} skipped")
     git(args.fork, "checkout", "--quiet", BASE)
 

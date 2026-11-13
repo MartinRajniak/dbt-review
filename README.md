@@ -96,7 +96,6 @@ uv run --project ../dbt-review dbt-review --base duckdb
 | `--diff FILE`, `--diff -` | Review a diff you supply, from a file or a pipe: `git diff HEAD~1 \| dbt-review --diff -` |
 | `--repo DIR` | The dbt project (default: the current directory) |
 | `--format json` | Machine-readable output |
-| `--show-info` | Also print `info` findings; by default they are only counted |
 | `--model provider:name` | The LLM (default `groq:openai/gpt-oss-120b`). Reads `GROQ_API_KEY`, `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` |
 
 Exit codes: `0` no errors · `1` the review found an error · `2` the tool could not do its job (no dbt project,
@@ -193,8 +192,8 @@ Smaller choices:
   fake model for tests, and the provider as a setting. Groq's `openai/gpt-oss-120b` is the default because it is
   free to try and holds the answer structure well. Anthropic and OpenAI models are accepted through the same
   option and have not been run.
-- **Little text on purpose.** The more a review says, the less of it is read: `info` findings are hidden by
-  default, and a message or fix over 300 characters is rejected. The model is asked again; if the answer stays
+- **Little text on purpose.** The more a review says, the less of it is read: a message or fix over 300
+  characters is rejected. The model is asked again; if the answer stays
   too long, the LLM check is skipped.
 
 ## Adding a check

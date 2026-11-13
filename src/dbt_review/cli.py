@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> ExitCode:
         print(f"dbt-review: unexpected failure ({type(error).__name__}): {error}", file=sys.stderr)
         return ExitCode.TOOL_FAILED
     render = render_json if args.format == "json" else render_text
-    print(render(review, show_info=args.show_info))
+    print(render(review))
     return ExitCode.FOUND_ERRORS if review.count(Severity.ERROR) else ExitCode.OK
 
 
@@ -44,7 +44,6 @@ def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--base", help="git ref the checked-out branch is compared against")
     parser.add_argument("--diff", help="file holding the diff to review, or - for standard input")
     parser.add_argument("--format", choices=["text", "json"], default="text")
-    parser.add_argument("--show-info", action="store_true", help="also print info findings")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="LLM as provider:name (default: %(default)s)")
     return parser.parse_args(argv)
 

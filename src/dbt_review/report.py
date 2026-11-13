@@ -8,20 +8,19 @@ INDENT = " " * 9
 EVIDENCE_LABEL = "Evidence: "
 
 
-def render_text(review: Review, show_info: bool = False) -> str:
+def render_text(review: Review) -> str:
     lines = [_header(review), ""]
-    for file, findings in groupby(_shown_findings(review, show_info), key=lambda f: f.file):
+    for file, findings in groupby(_sorted_findings(review), key=lambda f: f.file):
         lines.append(file)
         for finding in findings:
             lines.extend(_finding_lines(finding))
             lines.append("")
-    lines.append(_counts(review, show_info))
+    lines.append(_counts(review))
     lines.extend(_skipped_lines(review))
     return "\n".join(lines)
 
 
-def render_json(review: Review, show_info: bool = False) -> str:
-    """The summary counts every finding, shown or not."""
+def render_json(review: Review) -> str:
     payload = {
         "context": review.context.model_dump(),
         "summary": {
@@ -30,15 +29,14 @@ def render_json(review: Review, show_info: bool = False) -> str:
             "infos": review.count(Severity.INFO),
         },
         "skipped": [skipped.model_dump() for skipped in review.skipped],
-        "findings": [f.model_dump(mode="json") for f in _shown_findings(review, show_info)],
+        "findings": [f.model_dump(mode="json") for f in _sorted_findings(review)],
     }
     return json.dumps(payload, indent=2)
 
 
-def _shown_findings(review: Review, show_info: bool) -> list[Finding]:
+def _sorted_findings(review: Review) -> list[Finding]:
     """Sorted, so two runs print the same."""
-    shown = [f for f in review.findings if show_info or f.severity != Severity.INFO]
-    return sorted(shown, key=lambda f: (f.file, f.line, SEVERITY_ORDER.index(f.severity)))
+    return sorted(review.findings, key=lambda f: (f.file, f.line, SEVERITY_ORDER.index(f.severity)))
 
 
 def _header(review: Review) -> str:
@@ -66,14 +64,12 @@ def _finding_lines(finding: Finding) -> list[str]:
     return lines
 
 
-def _counts(review: Review, show_info: bool) -> str:
-    infos = review.count(Severity.INFO)
-    hidden_note = " hidden (--show-info)" if infos and not show_info else ""
+def _counts(review: Review) -> str:
     return " · ".join(
         [
             _plural(review.count(Severity.ERROR), "error"),
             _plural(review.count(Severity.WARNING), "warning"),
-            f"{infos} info{hidden_note}",
+            f"{review.count(Severity.INFO)} info",
         ]
     )
 

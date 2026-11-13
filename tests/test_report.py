@@ -123,7 +123,7 @@ def review_with_a_warning_and_an_info() -> Review:
     )
 
 
-def test_info_findings_are_hidden_by_default_but_still_counted():
+def test_info_findings_are_printed_like_the_others():
     assert render_text(review_with_a_warning_and_an_info()) == "\n".join(
         [
             "dbt-review · 1 file changed",
@@ -132,15 +132,12 @@ def test_info_findings_are_hidden_by_default_but_still_counted():
             "  1      warning  check (rule)",
             "         m",
             "",
-            "0 errors · 1 warning · 1 info hidden (--show-info)",
+            "  2      info     check (rule)",
+            "         m",
+            "",
+            "0 errors · 1 warning · 1 info",
         ]
     )
-
-
-def test_info_findings_are_shown_on_request():
-    text = render_text(review_with_a_warning_and_an_info(), show_info=True)
-    assert "  2      info     check (rule)" in text
-    assert text.endswith("0 errors · 1 warning · 1 info")
 
 
 def test_json_carries_context_summary_and_every_field_of_a_finding():
@@ -171,13 +168,11 @@ def test_json_carries_context_summary_and_every_field_of_a_finding():
     }
 
 
-def test_json_hides_info_findings_like_the_text_report_and_still_counts_them():
-    review = review_with_a_warning_and_an_info()
-    default = json.loads(render_json(review))
-    assert [finding["severity"] for finding in default["findings"]] == ["warning"]
-    assert default["summary"]["infos"] == 1
-    everything = json.loads(render_json(review, show_info=True))
-    assert [finding["severity"] for finding in everything["findings"]] == ["warning", "info"]
+def test_json_carries_info_findings():
+    payload = json.loads(render_json(review_with_a_warning_and_an_info()))
+
+    assert [finding["severity"] for finding in payload["findings"]] == ["warning", "info"]
+    assert payload["summary"]["infos"] == 1
 
 
 def review_with_skipped_checks() -> Review:
