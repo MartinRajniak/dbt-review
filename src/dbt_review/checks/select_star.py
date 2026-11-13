@@ -27,19 +27,29 @@ def check(path: str, sql: str) -> list[Finding]:
 
 def _open_stars(select: exp.Select, ctes: dict[str, exp.Select]) -> list[exp.Star]:
     """Stars that reach a relation without the columns being written out on the way."""
-    select = _output_select(select, ctes)
+    select, ctes = _output_select(select, ctes)
     return [
         star
         for star in _stars(select)
-        if any(name not in ctes or _open_stars(ctes[name], ctes) for name in _sources(star, select))
+        if any(
+            name not in ctes or _open_stars(ctes[name], _without(ctes, name))
+            for name in _sources(star, select)
+        )
     ]
 
 
-def _output_select(select: exp.Select, ctes: dict[str, exp.Select]) -> exp.Select:
+def _output_select(
+    select: exp.Select, ctes: dict[str, exp.Select]
+) -> tuple[exp.Select, dict[str, exp.Select]]:
     """A closing `select * from final` names no columns; the select inside `final` does."""
     while (source := _passed_through(select)) in ctes:
-        select = ctes[source]
-    return select
+        select, ctes = ctes[source], _without(ctes, source)
+    return select, ctes
+
+
+def _without(ctes: dict[str, exp.Select], name: str) -> dict[str, exp.Select]:
+    """Inside a CTE its own name means the table it reads, so `customers as (select * from raw.customers)` ends."""
+    return {other: cte for other, cte in ctes.items() if other != name}
 
 
 def _passed_through(select: exp.Select) -> str:

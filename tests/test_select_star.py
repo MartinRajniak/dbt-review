@@ -145,6 +145,20 @@ def test_select_without_a_from_has_no_star_to_check():
     assert check("models/constants.sql", "select 1 as id\n") == []
 
 
+CTE_NAMED_LIKE_ITS_TABLE = """\
+with customers as (
+    select * from raw.customers
+)
+select * from customers
+"""
+
+
+def test_cte_named_like_the_table_it_reads_is_followed_once():
+    [finding] = check("models/customers.sql", CTE_NAMED_LIKE_ITS_TABLE)
+
+    assert finding.line == 2
+
+
 def test_union_at_the_top_level_is_not_checked():
     sql = "select * from {{ ref('a') }}\nunion all\nselect * from {{ ref('b') }}\n"
 
