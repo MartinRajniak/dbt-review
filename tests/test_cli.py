@@ -40,6 +40,11 @@ def review_of(project: Path, diff_text: str) -> list[str]:
     return ["--repo", str(project), "--diff", str(diff_file)]
 
 
+def test_exit_codes_are_the_documented_contract():
+    """CI reads the numbers, not the names: 0 clean, 1 the review found an error, 2 the tool failed."""
+    assert (ExitCode.OK, ExitCode.FOUND_ERRORS, ExitCode.TOOL_FAILED) == (0, 1, 2)
+
+
 def test_no_input_is_a_tool_failure_not_a_review_result(capsys):
     assert main([]) == ExitCode.TOOL_FAILED
     assert "nothing to review" in capsys.readouterr().err
