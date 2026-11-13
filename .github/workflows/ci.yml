@@ -16,3 +16,6 @@ jobs:
       - run: uv run ruff format --check
       - run: uv run mypy
       - run: uv run pytest
+        env:
+          # The end-to-end test clones the demo project and reviews every scenario branch (rules only, no API key).
+          DBT_REVIEW_FORK: https://github.com/MartinRajniak/jaffle_shop_duckdb
