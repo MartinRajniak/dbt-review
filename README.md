@@ -147,6 +147,19 @@ A pull request from a fork gets no secrets, so its review runs the rules and rep
 
 ## How it works
 
+```mermaid
+flowchart LR
+    diff["git diff<br/>--base or --diff"] --> match{"checkout<br/>matches the diff?"}
+    repo["dbt project<br/>checked out"] --> match
+    match -- no --> fail["exit 2<br/>could not review"]
+    match -- yes --> rules["Rules<br/>select-star<br/>hardcoded-relation<br/>no LLM, same answer every time"]
+    match -- yes --> llm["LLM, one call per model<br/>+ tests from manifest.json<br/>comments hidden"]
+    rules --> added["keep findings<br/>on added lines"]
+    llm --> added
+    added --> report["Report<br/>file · line · severity · fix"]
+    report --> exit["exit 1 only if a rule<br/>found an error"]
+```
+
 1. Parse the diff into changed dbt files and the lines each one added.
 2. Refuse to continue if there is no dbt project, or if the files on disk are not the ones the diff describes.
 3. Run every rule on each changed model. SQL is parsed with sqlglot after Jinja is swapped for placeholders.
