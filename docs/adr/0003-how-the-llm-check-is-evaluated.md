@@ -27,21 +27,11 @@ Three levels. Each catches what the one before it cannot.
 | 2. Scenario eval, real model | The whole tool on every scenario in `examples/`, several times each | A prompt, model or library change making results worse | Before merging a change to the prompt, the model or the LLM library |
 | 3. The same eval on a schedule | Level 2, unchanged | The provider changing the model | Nightly |
 
-Level 2 is the gate for prompt and model changes. Each scenario states what must be found and what must not:
-
-```json
-{"must_find": [{"check_id": "join-fanout", "file": "models/orders.sql", "lines": [55, 56]}],
- "must_not_find": ["naming"]}
-```
-
-The eval reports, per scenario and in total: hits and misses, noise (any finding on the clean scenario counts),
-findings the tool dropped, agreement between runs, and tokens and seconds, which become cost per review.
-
-A change is kept when hits do not go down and noise does not go up. The scenarios are the specification: a problem
+Level 2 is the gate for prompt and model changes. Each scenario states what must be found and what must not. A
+change is kept when hits do not go down and noise does not go up. The scenarios are the specification: a problem
 found in production becomes a new scenario first, then a prompt or rule change.
 
-Level 2 does not run on every push. It needs an API key, it costs money, and its result varies from run to run, so
-it would make CI slow and flaky. It is a separate command.
+Level 2 does not run on every push: it needs an API key, it costs money, and its result varies from run to run.
 
 ## State
 
