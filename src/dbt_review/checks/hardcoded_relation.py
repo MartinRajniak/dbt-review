@@ -21,7 +21,9 @@ def check(path: str, sql: str) -> list[Finding]:
             suggestion=f"Use {{{{ ref('{table.name}') }}}}, or {{{{ source(...) }}}} for a raw table.",
         )
         for table in tree.find_all(exp.Table)
-        if table.name not in ctes and not is_placeholder(table.name)
+        if table.name  # a table function such as generate_series() has no name
+        and table.name not in ctes
+        and not is_placeholder(table.name)
     ]
 
 

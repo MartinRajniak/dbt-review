@@ -46,3 +46,7 @@ left join payments on orders.order_id = payments.order_id
 
 def test_ref_source_and_cte_names_are_fine():
     assert check("models/orders.sql", THROUGH_DBT) == []
+
+
+def test_table_function_is_not_a_relation():
+    assert check("models/numbers.sql", "select n from generate_series(1, 3) as numbers(n)\n") == []
