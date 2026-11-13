@@ -178,6 +178,26 @@ def test_warnings_alone_do_not_fail_the_run(dbt_project):
     assert main(review_of(dbt_project, STAR_DIFF)) == ExitCode.OK
 
 
+UNPARSEABLE_DIFF = """\
+diff --git a/models/events.sql b/models/events.sql
+new file mode 100644
+--- /dev/null
++++ b/models/events.sql
+@@ -0,0 +1 @@
++select payload:id::int as event_id from {{ ref('stg_events') }}
+"""
+
+
+def test_a_model_the_rules_cannot_parse_is_reported_as_skipped(dbt_project, capsys):
+    (dbt_project / "models" / "events.sql").write_text(
+        "select payload:id::int as event_id from {{ ref('stg_events') }}\n"
+    )
+
+    assert main(review_of(dbt_project, UNPARSEABLE_DIFF)) == ExitCode.OK
+    out = capsys.readouterr().out
+    assert "skipped (could not parse models/events.sql): select-star, hardcoded-relation" in out
+
+
 def test_checkout_from_before_the_change_is_refused(dbt_project, capsys):
     (dbt_project / "models" / "customers.sql").write_text(
         "select customer_id\n\nfrom {{ ref('stg_customers') }}\n"

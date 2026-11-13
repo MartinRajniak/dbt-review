@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from pydantic_ai.exceptions import AgentRunError
+from sqlglot.errors import ParseError
 
 from dbt_review.checks import RULES
 from dbt_review.diff import ChangedFile, parse_diff
@@ -21,8 +22,9 @@ def review_diff(diff_text: str, repo: Path, base: str | None = None, model: str 
         raise ToolError(f"no dbt project at {repo} (dbt_project.yml not found); the review needs the code")
     _require_matching_checkout(repo, changed)
     context = ReviewContext(base=base, files_changed=len(changed))
-    llm_findings, skipped = _llm_findings(repo, changed, model)
-    return Review(context=context, findings=_rule_findings(repo, changed) + llm_findings, skipped=skipped)
+    rule_findings, rules_skipped = _rule_findings(repo, changed)
+    llm_findings, llm_skipped = _llm_findings(repo, changed, model)
+    return Review(context=context, findings=rule_findings + llm_findings, skipped=rules_skipped + llm_skipped)
 
 
 def _require_matching_checkout(project: Path, changed: list[ChangedFile]) -> None:
@@ -38,15 +40,20 @@ def _require_matching_checkout(project: Path, changed: list[ChangedFile]) -> Non
                 raise ToolError(f"{file.path}:{number} does not match the diff; {hint}")
 
 
-def _rule_findings(project: Path, changed: list[ChangedFile]) -> list[Finding]:
+def _rule_findings(project: Path, changed: list[ChangedFile]) -> tuple[list[Finding], list[Skipped]]:
     """Findings on the lines the change added; older problems are not this author's to fix."""
-    findings = []
+    findings, skipped = [], []
     for file in changed:
         if file.path.endswith(".sql"):
             sql = (project / file.path).read_text(encoding="utf-8")
-            found = [finding for rule in RULES for finding in rule.check(file.path, sql)]
-            findings += [finding for finding in found if finding.line in file.added_lines]
-    return findings
+            for rule in RULES:
+                try:
+                    found = rule.check(file.path, sql)
+                except ParseError:
+                    skipped.append(Skipped(check_id=rule.check_id, reason=f"could not parse {file.path}"))
+                    continue
+                findings += [finding for finding in found if finding.line in file.added_lines]
+    return findings, skipped
 
 
 def _llm_findings(
