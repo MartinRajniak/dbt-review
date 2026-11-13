@@ -56,7 +56,7 @@ def _passed_through(select: exp.Select) -> str:
     """The table a bare `select * from x` reads; empty when the select is anything else."""
     tables = _tables(select)
     only_a_star = len(select.expressions) == 1 and isinstance(select.expressions[0], exp.Star)
-    return tables[0].name if only_a_star and len(tables) == 1 else ""
+    return _cte_name(tables[0]) if only_a_star and len(tables) == 1 else ""
 
 
 def _stars(select: exp.Select) -> list[exp.Star]:
@@ -70,7 +70,12 @@ def _sources(star: exp.Star, select: exp.Select) -> list[str]:
     tables = _tables(select)
     if isinstance(star.parent, exp.Column):
         tables = [table for table in tables if table.alias_or_name == star.parent.table]
-    return [table.name for table in tables]
+    return [_cte_name(table) for table in tables]
+
+
+def _cte_name(table: exp.Table) -> str:
+    """The name a CTE could answer to; `raw.payments` is a table even when a CTE is called `payments`."""
+    return "" if table.db else table.name
 
 
 def _tables(select: exp.Select) -> list[exp.Table]:

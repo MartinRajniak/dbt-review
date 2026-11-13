@@ -159,6 +159,28 @@ def test_cte_named_like_the_table_it_reads_is_followed_once():
     assert finding.line == 2
 
 
+TABLE_NAMED_LIKE_A_CTE = """\
+with payments as (
+    select payment_id from {{ ref('stg_payments') }}
+)
+select * from raw.payments
+"""
+
+
+def test_schema_qualified_table_is_not_the_cte_of_the_same_name():
+    [finding] = check("models/payments.sql", TABLE_NAMED_LIKE_A_CTE)
+
+    assert finding.line == 4
+
+
+def test_star_of_a_schema_qualified_table_is_not_the_star_of_the_cte():
+    sql = TABLE_NAMED_LIKE_A_CTE.replace("select * from", "select payments.*, 1 as one from")
+
+    [finding] = check("models/payments.sql", sql)
+
+    assert finding.line == 4
+
+
 def test_union_at_the_top_level_is_not_checked():
     sql = "select * from {{ ref('a') }}\nunion all\nselect * from {{ ref('b') }}\n"
 
