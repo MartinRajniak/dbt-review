@@ -67,22 +67,26 @@ def _llm_findings(
     if key and not os.environ.get(key):
         return [], [_llm_skipped(f"{key} is not set")]
     manifest = load_manifest(manifest_path)
-    findings = []
+    findings, skipped = [], []
     for file in changed:
+        if not file.path.endswith(".sql"):
+            continue
         facts = manifest.model_at(file.path)
-        if facts is not None:
-            context = ModelContext(
-                path=file.path,
-                sql=(project / file.path).read_text(encoding="utf-8"),
-                added_lines=list(file.added_lines),
-                model=facts,
-                inputs=[known for name in facts.reads if (known := manifest.model_named(name))],
-            )
-            try:
-                findings += review_model(context, model)
-            except AgentRunError as error:
-                return [], [_llm_skipped(f"the model call failed: {type(error).__name__}")]
-    return findings, []
+        if facts is None:  # a stale manifest; silence would read as "reviewed, nothing found"
+            skipped.append(_llm_skipped(f"{file.path} is not in target/manifest.json: run `dbt parse` again"))
+            continue
+        context = ModelContext(
+            path=file.path,
+            sql=(project / file.path).read_text(encoding="utf-8"),
+            added_lines=list(file.added_lines),
+            model=facts,
+            inputs=[known for name in facts.reads if (known := manifest.model_named(name))],
+        )
+        try:
+            findings += review_model(context, model)
+        except AgentRunError as error:
+            return [], [_llm_skipped(f"the model call failed: {type(error).__name__}")]
+    return findings, skipped
 
 
 def _llm_skipped(reason: str) -> Skipped:

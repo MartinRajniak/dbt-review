@@ -275,6 +275,37 @@ def test_llm_findings_from_every_changed_model_are_kept(parsed_project, capsys):
     assert capsys.readouterr().out.count("join-fanout (llm)") == 2
 
 
+def test_a_changed_model_the_manifest_does_not_know_is_reported_as_skipped(parsed_project, capsys):
+    (parsed_project / "models" / "orders.sql").write_text("select order_id from {{ ref('stg_orders') }}\n")
+
+    with reviewer.override(model=model_answering(LLM_WARNING)):
+        main(review_of(parsed_project, TWO_MODELS_DIFF))
+
+    out = capsys.readouterr().out
+    assert out.count("join-fanout (llm)") == 1
+    assert out.splitlines()[-1] == (
+        "skipped (models/orders.sql is not in target/manifest.json: run `dbt parse` again): llm-review"
+    )
+
+
+YML_DIFF = """\
+diff --git a/models/schema.yml b/models/schema.yml
+new file mode 100644
+--- /dev/null
++++ b/models/schema.yml
+@@ -0,0 +1 @@
++version: 2
+"""
+
+
+def test_a_changed_yml_file_is_not_a_model_the_manifest_should_know(parsed_project, capsys):
+    (parsed_project / "models" / "schema.yml").write_text("version: 2\n")
+
+    main(review_of(parsed_project, YML_DIFF))
+
+    assert "skipped" not in capsys.readouterr().out
+
+
 def test_without_a_manifest_the_llm_check_is_reported_as_skipped(dbt_project, capsys):
     main(review_of(dbt_project, STAR_DIFF))
 
