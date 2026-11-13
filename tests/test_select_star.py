@@ -126,6 +126,21 @@ def test_jinja_does_not_break_parsing_or_shift_line_numbers():
     assert finding.line == 8
 
 
+WITH_CONFIG = """\
+{{
+    config(materialized='table')
+}}
+
+select * from {{ ref('stg_orders') }}
+"""
+
+
+def test_config_block_does_not_break_parsing_or_shift_line_numbers():
+    [finding] = check("models/orders.sql", WITH_CONFIG)
+
+    assert finding.line == 5
+
+
 def test_union_at_the_top_level_is_not_checked():
     sql = "select * from {{ ref('a') }}\nunion all\nselect * from {{ ref('b') }}\n"
 

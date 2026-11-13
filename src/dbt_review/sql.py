@@ -9,7 +9,8 @@ import re
 import sqlglot
 from sqlglot import exp
 
-JINJA_BLOCK = re.compile(r"\{#.*?#\}|\{%.*?%\}", re.DOTALL)
+# Comments, statements and config() render to nothing; dbt reads config() while parsing.
+JINJA_BLOCK = re.compile(r"\{#.*?#\}|\{%.*?%\}|\{\{\s*config\(.*?\)\s*\}\}", re.DOTALL)
 JINJA_REF = re.compile(r"\{\{\s*ref\(\s*['\"](\w+)['\"]\s*\)\s*\}\}")
 JINJA_EXPRESSION = re.compile(r"\{\{.*?\}\}")
 PLACEHOLDER_PREFIX = "__"
